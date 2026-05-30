@@ -27,10 +27,13 @@ function modelKind(node) {
 async function stemsForNode(node) {
   const widget = getWidget(node, "model_name");
   const modelName = widget?.value;
+  if (!modelName) {
+    return null;
+  }
   const kind = modelKind(node);
   const models = await getCatalog();
   const model = models.find((item) => item.name === modelName && (kind === "vr" ? item.model_type === "vr" : item.model_type !== "vr"));
-  return model?.stems?.length ? model.stems : ["audio"];
+  return model?.stems?.length ? model.stems : null;
 }
 
 function setOutputName(output, name) {
@@ -40,15 +43,24 @@ function setOutputName(output, name) {
   output.type = "AUDIO";
 }
 
+function outputHasLinks(output) {
+  return Array.isArray(output?.links) && output.links.length > 0;
+}
+
 function syncOutputs(node, stems) {
+  if (!stems?.length) {
+    return;
+  }
+
   const desired = stems.slice(0, MAX_STEMS);
 
-  while ((node.outputs?.length ?? 0) > desired.length) {
+  while ((node.outputs?.length ?? 0) > desired.length && !outputHasLinks(node.outputs[node.outputs.length - 1])) {
     node.removeOutput(node.outputs.length - 1);
   }
 
-  for (let index = 0; index < desired.length; index += 1) {
-    const name = desired[index];
+  const outputCount = Math.max(desired.length, node.outputs?.length ?? 0);
+  for (let index = 0; index < outputCount; index += 1) {
+    const name = desired[index] ?? node.outputs?.[index]?.name ?? `stem_${index + 1}`;
     if (!node.outputs?.[index]) {
       node.addOutput(name, "AUDIO");
       setOutputName(node.outputs[index], name);
@@ -70,6 +82,10 @@ async function refreshNodeOutputs(node) {
   }
 }
 
+function scheduleRefreshNodeOutputs(node) {
+  setTimeout(() => refreshNodeOutputs(node), 0);
+}
+
 app.registerExtension({
   name: "comfy-mss.dynamic-outputs",
 
@@ -86,18 +102,18 @@ app.registerExtension({
         const callback = widget.callback;
         widget.callback = (value, canvas, node, pos, event) => {
           const callbackResult = callback?.call(widget, value, canvas, node, pos, event);
-          refreshNodeOutputs(this);
+          scheduleRefreshNodeOutputs(this);
           return callbackResult;
         };
       }
-      refreshNodeOutputs(this);
+      scheduleRefreshNodeOutputs(this);
       return result;
     };
 
     const onConfigure = nodeType.prototype.onConfigure;
     nodeType.prototype.onConfigure = function () {
       const result = onConfigure?.apply(this, arguments);
-      refreshNodeOutputs(this);
+      scheduleRefreshNodeOutputs(this);
       return result;
     };
   },
