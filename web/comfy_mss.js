@@ -32,6 +32,13 @@ async function stemsForNode(node) {
   return model?.stems?.length ? model.stems : ["audio"];
 }
 
+function setOutputName(output, name) {
+  output.name = name;
+  output.label = name;
+  output.localized_name = name;
+  output.type = "AUDIO";
+}
+
 function syncOutputs(node, stems) {
   const desired = stems.slice(0, MAX_STEMS);
 
@@ -43,9 +50,9 @@ function syncOutputs(node, stems) {
     const name = desired[index];
     if (!node.outputs?.[index]) {
       node.addOutput(name, "AUDIO");
+      setOutputName(node.outputs[index], name);
     } else {
-      node.outputs[index].name = name;
-      node.outputs[index].type = "AUDIO";
+      setOutputName(node.outputs[index], name);
     }
   }
 
