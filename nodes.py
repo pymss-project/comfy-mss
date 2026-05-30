@@ -24,6 +24,7 @@ MSS_PARAMS_TYPE = "PYMSS_MSS_PARAMS"
 VR_PARAMS_TYPE = "PYMSS_VR_PARAMS"
 MODEL_FOLDER_NAME = "pymss"
 MODEL_DIR_ENV_VARS = ("COMFY_MSS_MODEL_DIR", "PYMSS_MODEL_DIR")
+AUDIO_EXTENSIONS = (".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aac", ".aiff", ".aif", ".wma", ".opus")
 
 
 def _default_model_dir():
@@ -168,6 +169,97 @@ def _audio_batch_to_numpy(audio):
     if waveform.ndim != 3:
         raise ValueError(f"Expected ComfyUI AUDIO waveform [batch, channels, samples], got shape {tuple(waveform.shape)}.")
     return waveform.detach().cpu().numpy().astype(np.float32, copy=False), sample_rate
+
+
+def _numpy_to_comfy_audio(audio, sample_rate):
+    array = np.asarray(audio, dtype=np.float32)
+    if array.ndim == 1:
+        array = array[None, :]
+    elif array.ndim != 2:
+        raise ValueError(f"Unsupported loaded audio shape: {array.shape}")
+    return {"waveform": torch.from_numpy(np.ascontiguousarray(array)).unsqueeze(0), "sample_rate": int(sample_rate)}
+
+
+def _resolve_input_path(path):
+    path = str(path or "").strip().strip('"')
+    if not path:
+        return None
+    path = os.path.expanduser(os.path.expandvars(path))
+    if os.path.isabs(path):
+        return os.path.abspath(path)
+    return os.path.abspath(os.path.join(folder_paths.get_input_directory(), path))
+
+
+def _parse_audio_file_list(audio_files):
+    paths = []
+    for line in str(audio_files or "").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        resolved = _resolve_input_path(line)
+        if resolved is not None:
+            paths.append(resolved)
+    return paths
+
+
+def _parse_extensions(extensions):
+    parsed = []
+    for item in re.split(r"[,;\s]+", str(extensions or "")):
+        item = item.strip().lower()
+        if not item:
+            continue
+        parsed.append(item if item.startswith(".") else f".{item}")
+    return tuple(parsed or AUDIO_EXTENSIONS)
+
+
+def _scan_audio_folder(folder, recursive, extensions):
+    folder = _resolve_input_path(folder)
+    if folder is None:
+        raise ValueError("folder is required when input_mode is folder.")
+    if not os.path.isdir(folder):
+        raise NotADirectoryError(f"folder does not exist: {folder}")
+
+    matches = []
+    extensions = tuple(ext.lower() for ext in extensions)
+    if recursive:
+        for root, _dirs, files in os.walk(folder):
+            for filename in files:
+                if filename.lower().endswith(extensions):
+                    matches.append(os.path.join(root, filename))
+    else:
+        for filename in os.listdir(folder):
+            path = os.path.join(folder, filename)
+            if os.path.isfile(path) and filename.lower().endswith(extensions):
+                matches.append(path)
+    return matches
+
+
+def _load_audio_paths(paths, sample_rate, mono, sort_files, limit):
+    from pymss.audio_io import load_audio
+
+    unique_paths = []
+    seen = set()
+    for path in paths:
+        path = os.path.abspath(path)
+        if path in seen:
+            continue
+        seen.add(path)
+        unique_paths.append(path)
+
+    if sort_files:
+        unique_paths.sort(key=lambda item: item.lower())
+    if limit > 0:
+        unique_paths = unique_paths[:limit]
+    if not unique_paths:
+        raise ValueError("No audio files were found.")
+
+    audios = []
+    for path in unique_paths:
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"audio file does not exist: {path}")
+        audio, sr = load_audio(path, sr=None if sample_rate <= 0 else sample_rate, mono=mono)
+        audios.append(_numpy_to_comfy_audio(audio, sr))
+    return audios, unique_paths
 
 
 def _resolve_save_dir(output_folder):
@@ -446,6 +538,52 @@ class PymssModelList:
         return (json.dumps(_model_catalog(model_kind), ensure_ascii=False, indent=2),)
 
 
+class PymssLoadAudioBatch:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "input_mode": (["files", "folder"], {"default": "files"}),
+                "audio_files": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": True,
+                    },
+                ),
+                "folder": ("STRING", {"default": "", "multiline": False}),
+                "recursive": ("BOOLEAN", {"default": False}),
+                "extensions": ("STRING", {"default": ",".join(AUDIO_EXTENSIONS), "multiline": False}),
+                "sort_files": ("BOOLEAN", {"default": True}),
+                "limit": ("INT", {"default": 0, "min": 0, "max": 100000, "step": 1}),
+                "sample_rate": ("INT", {"default": 0, "min": 0, "max": 384000, "step": 1000}),
+                "mono": ("BOOLEAN", {"default": False}),
+            }
+        }
+
+    RETURN_TYPES = ("AUDIO", "STRING")
+    RETURN_NAMES = ("audio", "path")
+    OUTPUT_IS_LIST = (True, True)
+    FUNCTION = "load"
+    CATEGORY = CATEGORY
+
+    def load(self, input_mode, audio_files, folder, recursive, extensions, sort_files, limit, sample_rate, mono):
+        exts = _parse_extensions(extensions)
+        if input_mode == "folder":
+            paths = _scan_audio_folder(folder, recursive, exts)
+        else:
+            paths = _parse_audio_file_list(audio_files)
+
+        audios, loaded_paths = _load_audio_paths(
+            paths=paths,
+            sample_rate=int(sample_rate),
+            mono=bool(mono),
+            sort_files=bool(sort_files),
+            limit=int(limit),
+        )
+        return (audios, loaded_paths)
+
+
 class PymssSaveAudio:
     @classmethod
     def INPUT_TYPES(cls):
@@ -519,6 +657,7 @@ NODE_CLASS_MAPPINGS = {
     "pymss_mss_params": PymssMssParams,
     "pymss_vr_params": PymssVrParams,
     "PymssModelList": PymssModelList,
+    "pymss_load_audio_batch": PymssLoadAudioBatch,
     "pymss_save_audio": PymssSaveAudio,
 }
 
@@ -528,5 +667,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "pymss_mss_params": "pymss MSS Params",
     "pymss_vr_params": "pymss VR Params",
     "PymssModelList": "pymss Model List",
+    "pymss_load_audio_batch": "pymss Load Audio Batch",
     "pymss_save_audio": "pymss Save Audio",
 }
