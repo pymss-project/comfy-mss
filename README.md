@@ -8,6 +8,7 @@ ComfyUI custom nodes for [pymss](https://pypi.org/project/pymss/), a Python musi
 - `vr_separate`: separates a ComfyUI `AUDIO` stream with VR/UVR pymss models.
 - `pymss MSS Params`: optional parameter input for `mss_separate`.
 - `pymss VR Params`: optional parameter input for `vr_separate`.
+- `pymss Save Audio`: saves ComfyUI `AUDIO` streams as `wav`, `flac`, `mp3`, or `m4a`.
 - `pymss Model List`: lists known pymss models and stem metadata as JSON.
 
 ## Install pymss
@@ -28,7 +29,8 @@ Restart ComfyUI after installing or changing the dependency.
 
 ## Notes
 
-- Use ComfyUI's built-in `Load Audio` and `Save Audio` / `Preview Audio` nodes for IO.
+- Use ComfyUI's built-in `Load Audio` node for loading audio. `pymss Save Audio` can save separated stems with selectable format, quality, and folder.
+- `pymss Save Audio` defaults to ComfyUI's output folder. A relative `output_folder` is created inside the output folder; an absolute `output_folder` is used directly.
 - `mss_separate` and `vr_separate` outputs are refreshed by the frontend extension after choosing a model.
 - The backend declares up to 64 audio stems, which covers the current pymss catalog maximum of 53 stems.
 - Model files default to `ComfyUI/models/pymss`. The folder is created automatically when the node loads.

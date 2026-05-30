@@ -160,6 +160,65 @@ def _numpy_to_audio(value, sample_rate):
     return {"waveform": torch.from_numpy(np.ascontiguousarray(array)).unsqueeze(0), "sample_rate": int(sample_rate)}
 
 
+def _audio_batch_to_numpy(audio):
+    if audio is None:
+        raise ValueError("audio input is required.")
+    waveform = audio["waveform"]
+    sample_rate = int(audio["sample_rate"])
+    if waveform.ndim != 3:
+        raise ValueError(f"Expected ComfyUI AUDIO waveform [batch, channels, samples], got shape {tuple(waveform.shape)}.")
+    return waveform.detach().cpu().numpy().astype(np.float32, copy=False), sample_rate
+
+
+def _resolve_save_dir(output_folder):
+    output_folder = str(output_folder or "").strip()
+    if not output_folder:
+        save_dir = folder_paths.get_output_directory()
+    elif os.path.isabs(output_folder):
+        save_dir = output_folder
+    else:
+        save_dir = os.path.join(folder_paths.get_output_directory(), output_folder)
+    save_dir = os.path.abspath(os.path.expanduser(os.path.expandvars(save_dir)))
+    os.makedirs(save_dir, exist_ok=True)
+    return save_dir
+
+
+def _safe_filename_part(value, fallback):
+    value = str(value or "").strip() or fallback
+    value = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", value)
+    value = value.strip(" .")
+    return value or fallback
+
+
+def _save_comfy_audio(audio, output_folder, filename_prefix, output_format, wav_bit_depth, flac_bit_depth, mp3_bit_rate, m4a_bit_rate, m4a_codec, m4a_aac_at_quality):
+    from pymss.audio_io import save_audio
+
+    waveform, sample_rate = _audio_batch_to_numpy(audio)
+    save_dir = _resolve_save_dir(output_folder)
+    prefix = _safe_filename_part(filename_prefix, "ComfyUI")
+    output_format = output_format.lower()
+    audio_params = {
+        "wav_bit_depth": wav_bit_depth,
+        "flac_bit_depth": flac_bit_depth,
+        "mp3_bit_rate": mp3_bit_rate,
+        "m4a_bit_rate": m4a_bit_rate,
+        "m4a_codec": m4a_codec,
+        "m4a_aac_at_quality": m4a_aac_at_quality,
+    }
+
+    saved_paths = []
+    batch_size = int(waveform.shape[0])
+    for index, item in enumerate(waveform):
+        # ComfyUI AUDIO is [channels, samples]; pymss/av saving expects [samples, channels].
+        audio_array = np.ascontiguousarray(item.T)
+        suffix = "" if batch_size == 1 else f"_{index:05d}"
+        file_name = f"{prefix}{suffix}"
+        path = os.path.join(save_dir, f"{file_name}.{output_format}")
+        save_audio(path, audio_array, sample_rate, output_format, audio_params)
+        saved_paths.append(path)
+    return saved_paths
+
+
 def _device_ids(raw):
     values = [int(item.strip()) for item in str(raw or "0").split(",") if item.strip()]
     return values or [0]
@@ -387,6 +446,58 @@ class PymssModelList:
         return (json.dumps(_model_catalog(model_kind), ensure_ascii=False, indent=2),)
 
 
+class PymssSaveAudio:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "audio": ("AUDIO",),
+                "filename_prefix": ("STRING", {"default": "audio", "multiline": False}),
+                "output_format": (["wav", "flac", "mp3", "m4a"], {"default": "wav"}),
+                "output_folder": ("STRING", {"default": "", "multiline": False}),
+                "wav_bit_depth": (["FLOAT", "PCM_24", "PCM_16"], {"default": "FLOAT"}),
+                "flac_bit_depth": (["PCM_24", "PCM_16"], {"default": "PCM_24"}),
+                "mp3_bit_rate": (["128k", "192k", "256k", "320k"], {"default": "320k"}),
+                "m4a_bit_rate": (["128k", "192k", "256k", "320k"], {"default": "192k"}),
+                "m4a_codec": (["aac", "aac_at"], {"default": "aac"}),
+                "m4a_aac_at_quality": ("INT", {"default": 2, "min": 0, "max": 14, "step": 1}),
+            }
+        }
+
+    RETURN_TYPES = ("STRING", "STRING")
+    RETURN_NAMES = ("saved_paths_json", "first_path")
+    FUNCTION = "save"
+    CATEGORY = CATEGORY
+    OUTPUT_NODE = True
+
+    def save(
+        self,
+        audio,
+        filename_prefix,
+        output_format,
+        output_folder,
+        wav_bit_depth,
+        flac_bit_depth,
+        mp3_bit_rate,
+        m4a_bit_rate,
+        m4a_codec,
+        m4a_aac_at_quality,
+    ):
+        saved_paths = _save_comfy_audio(
+            audio,
+            output_folder,
+            filename_prefix,
+            output_format,
+            wav_bit_depth,
+            flac_bit_depth,
+            mp3_bit_rate,
+            m4a_bit_rate,
+            m4a_codec,
+            m4a_aac_at_quality,
+        )
+        return (json.dumps(saved_paths, ensure_ascii=False, indent=2), saved_paths[0] if saved_paths else "")
+
+
 if PromptServer is not None:
     @PromptServer.instance.routes.get("/comfy-mss/models")
     async def get_comfy_mss_models(request):
@@ -408,6 +519,7 @@ NODE_CLASS_MAPPINGS = {
     "pymss_mss_params": PymssMssParams,
     "pymss_vr_params": PymssVrParams,
     "PymssModelList": PymssModelList,
+    "pymss_save_audio": PymssSaveAudio,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -416,4 +528,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "pymss_mss_params": "pymss MSS Params",
     "pymss_vr_params": "pymss VR Params",
     "PymssModelList": "pymss Model List",
+    "pymss_save_audio": "pymss Save Audio",
 }
