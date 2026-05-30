@@ -397,19 +397,11 @@ class PymssMssParams:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "override_batch_size": ("BOOLEAN", {"default": False}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 128, "step": 1}),
-                "override_overlap_size": ("BOOLEAN", {"default": False}),
-                "overlap_size": ("INT", {"default": 2048, "min": 0, "max": 2147483647, "step": 1024}),
-                "override_chunk_size": ("BOOLEAN", {"default": False}),
-                "chunk_size": ("INT", {"default": 352800, "min": 1, "max": 2147483647, "step": 1024}),
-                "override_normalize": ("BOOLEAN", {"default": False}),
+                "overlap_size": ("INT", {"default": 24000, "min": 0, "max": 2147483647, "step": 1000}),
+                "chunk_size": ("INT", {"default": 480000, "min": 1, "max": 2147483647, "step": 1000}),
                 "normalize": ("BOOLEAN", {"default": False}),
-                "override_stem_batch_size": ("BOOLEAN", {"default": False}),
-                "stem_batch_size": ("INT", {"default": 1, "min": 1, "max": MAX_STEMS, "step": 1}),
-                "mask_mode": (["default", "no_segm", "soft", "hard"], {"default": "default"}),
-                "override_use_amp": ("BOOLEAN", {"default": False}),
-                "use_amp": ("BOOLEAN", {"default": True}),
+                "enable_tta": ("BOOLEAN", {"default": False}),
                 "extra_params_json": ("STRING", {"default": "{}", "multiline": True}),
             }
         }
@@ -419,34 +411,16 @@ class PymssMssParams:
     FUNCTION = "build"
     CATEGORY = CATEGORY
 
-    def build(
-        self,
-        override_batch_size,
-        batch_size,
-        override_overlap_size,
-        overlap_size,
-        override_chunk_size,
-        chunk_size,
-        override_normalize,
-        normalize,
-        override_stem_batch_size,
-        stem_batch_size,
-        mask_mode,
-        override_use_amp,
-        use_amp,
-        extra_params_json,
-    ):
+    def build(self, batch_size, overlap_size, chunk_size, normalize, enable_tta, extra_params_json):
         params = {
-            "batch_size": batch_size if override_batch_size else None,
-            "overlap_size": overlap_size if override_overlap_size else None,
-            "chunk_size": chunk_size if override_chunk_size else None,
-            "normalize": bool(normalize) if override_normalize else None,
-            "stem_batch_size": stem_batch_size if override_stem_batch_size else None,
-            "mask_mode": None if mask_mode == "default" else mask_mode,
-            "use_amp": bool(use_amp) if override_use_amp else None,
+            "batch_size": batch_size,
+            "overlap_size": overlap_size,
+            "chunk_size": chunk_size,
+            "normalize": bool(normalize),
+            "enable_tta": bool(enable_tta),
         }
         params.update(_parse_extra_params(extra_params_json))
-        return (_clean_none(params),)
+        return (params,)
 
 
 class PymssVrParams:
