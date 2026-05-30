@@ -37,6 +37,8 @@ Restart ComfyUI after installing or changing the dependency.
 - `pymss Audio Subtract` aligns sample rate, channel count, batch size, and duration before subtracting. If durations differ, the shorter length is used.
 - `pymss Save Audio` defaults to ComfyUI's output folder. A relative `output_folder` is created inside the output folder; an absolute `output_folder` is used directly.
 - `mss_separate` and `vr_separate` outputs are refreshed by the frontend extension after choosing a model.
+- `pymss MSS Params` defaults to pymss behavior by not overriding model YAML values unless the matching `override_*` toggle is enabled.
+- `pymss VR Params` defaults match pymss VR defaults: `batch_size=2`, `window_size=512`, `aggression=5`, `post_process_threshold=0.2`.
 - The backend declares up to 64 audio stems, which covers the current pymss catalog maximum of 53 stems.
 - Model files default to `ComfyUI/models/pymss`. The folder is created automatically when the node loads.
 - The default model folder can be changed at runtime with `COMFY_MSS_MODEL_DIR`. `PYMSS_MODEL_DIR` is also supported for pymss compatibility.
