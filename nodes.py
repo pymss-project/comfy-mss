@@ -359,25 +359,25 @@ def _separate_audio(audio, model_name, model_kind, params, model_dir, download_m
     stems = _stem_names(model_name, model_kind)
     store_dirs = {stem: "" for stem in stems}
 
-    with torch.inference_mode(False), torch.no_grad():
-        separator = pymss.MSSeparator.from_model_name(
-            model_name,
-            model_dir=_resolve_model_dir(model_dir),
-            download=bool(download_missing),
-            source=source,
-            device=device,
-            device_ids=_device_ids(device_ids),
-            output_format="wav",
-            use_tta=bool(use_tta),
-            store_dirs=store_dirs,
-            debug=bool(debug),
-            inference_params=params or {},
-        )
-        try:
-            results = separator.separate(mix, pbar=False, stems=None)
-        finally:
-            separator.del_cache()
-            gc.collect()
+    separator = pymss.MSSeparator.from_model_name(
+        model_name,
+        model_dir=_resolve_model_dir(model_dir),
+        download=bool(download_missing),
+        source=source,
+        device=device,
+        device_ids=_device_ids(device_ids),
+        output_format="wav",
+        use_tta=bool(use_tta),
+        store_dirs=store_dirs,
+        debug=bool(debug),
+        comfyui_mode=True,
+        inference_params=params or {},
+    )
+    try:
+        results = separator.separate(mix, pbar=False, stems=None)
+    finally:
+        separator.del_cache()
+        gc.collect()
 
     outputs = []
     for stem in stems:
