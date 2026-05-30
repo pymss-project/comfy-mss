@@ -3,6 +3,7 @@ import { api } from "../../scripts/api.js";
 
 const NODE_TYPES = new Set(["mss_separate", "vr_separate"]);
 const MAX_STEMS = 64;
+const MIN_NODE_WIDTH = 420;
 
 let catalog = null;
 
@@ -57,6 +58,7 @@ function syncOutputs(node, stems) {
   }
 
   node.setSize(node.computeSize());
+  node.size[0] = Math.max(node.size[0], MIN_NODE_WIDTH);
   node.setDirtyCanvas(true, true);
 }
 
