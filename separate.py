@@ -1,5 +1,6 @@
 import gc
 
+import comfy.utils
 import numpy as np
 
 from .audio_utils import audio_to_numpy, numpy_to_audio
@@ -12,6 +13,19 @@ from .paths import resolve_model_dir
 def device_ids(raw):
     values = [int(item.strip()) for item in str(raw or "0").split(",") if item.strip()]
     return values or [0]
+
+
+def make_comfy_progress_callback():
+    pbar_holder = {"pbar": None}
+
+    def progress_callback(done, total, _message=None):
+        total = max(1, int(total or 1))
+        done = max(0, min(int(done or 0), total))
+        if pbar_holder["pbar"] is None or pbar_holder["pbar"].total != total:
+            pbar_holder["pbar"] = comfy.utils.ProgressBar(total)
+        pbar_holder["pbar"].update_absolute(done, total)
+
+    return progress_callback
 
 
 def separate_audio(audio, model_name, model_kind, params, model_dir, download_missing, source, device, device_ids_raw, use_tta, debug):
@@ -35,6 +49,7 @@ def separate_audio(audio, model_name, model_kind, params, model_dir, download_mi
         store_dirs=store_dirs,
         debug=bool(debug),
         comfyui_mode=True,
+        progress_callback=make_comfy_progress_callback(),
         inference_params=params or {},
     )
     try:
