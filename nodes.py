@@ -1,0 +1,419 @@
+import gc
+import json
+import os
+import re
+from functools import lru_cache
+
+import numpy as np
+import torch
+
+import folder_paths
+
+try:
+    from aiohttp import web
+    from server import PromptServer
+except Exception:
+    web = None
+    PromptServer = None
+
+
+CATEGORY = "audio/pymss"
+MISSING_PYMSS_OPTION = "pymss is not installed"
+MAX_STEMS = 64
+MSS_PARAMS_TYPE = "PYMSS_MSS_PARAMS"
+VR_PARAMS_TYPE = "PYMSS_VR_PARAMS"
+MODEL_FOLDER_NAME = "pymss"
+MODEL_DIR_ENV_VARS = ("COMFY_MSS_MODEL_DIR", "PYMSS_MODEL_DIR")
+
+
+def _default_model_dir():
+    return os.path.join(folder_paths.models_dir, MODEL_FOLDER_NAME)
+
+
+def _resolve_model_dir(model_dir=None, create=True):
+    resolved = _coerce_optional_path(model_dir)
+    if resolved is None:
+        for env_name in MODEL_DIR_ENV_VARS:
+            resolved = _coerce_optional_path(os.environ.get(env_name))
+            if resolved is not None:
+                break
+    if resolved is None:
+        resolved = _default_model_dir()
+
+    resolved = os.path.abspath(os.path.expanduser(os.path.expandvars(resolved)))
+    if create:
+        os.makedirs(resolved, exist_ok=True)
+    return resolved
+
+
+def _register_model_folder():
+    model_dir = _resolve_model_dir(create=True)
+    folder_paths.add_model_folder_path(MODEL_FOLDER_NAME, model_dir, is_default=True)
+    return model_dir
+
+
+def _import_pymss():
+    try:
+        import pymss
+    except Exception as exc:
+        raise RuntimeError(
+            "pymss is required by comfy-mss. Install it with "
+            "`python -m pip install pymss`, or for local development use "
+            "`python -m pip install -e E:\\vs\\pymss` inside the ComfyUI environment."
+        ) from exc
+    return pymss
+
+
+def _coerce_optional_path(value):
+    value = str(value or "").strip()
+    return value or None
+
+
+DEFAULT_MODEL_DIR = _register_model_folder()
+
+
+def _model_names(model_kind):
+    try:
+        return [item["name"] for item in _model_catalog(model_kind)]
+    except Exception:
+        return [MISSING_PYMSS_OPTION]
+
+
+def _split_stems(value):
+    return [item.strip() for item in re.split(r"[|/]", value or "") if item.strip()]
+
+
+def _entry_stems(entry):
+    stems = _split_stems(entry.config_instruments)
+    if stems:
+        return stems
+
+    if entry.model_type == "vr":
+        try:
+            from pymss.modules.vocal_remover.vr_models import VR_MODEL_METADATA
+
+            data = VR_MODEL_METADATA.get(entry.name)
+            if data:
+                return [data["primary_stem"], data["secondary_stem"]]
+        except Exception:
+            pass
+
+    stems = _split_stems(entry.target_stem)
+    return stems or ["audio"]
+
+
+@lru_cache(maxsize=8)
+def _model_catalog(model_kind="all"):
+    pymss = _import_pymss()
+    rows = []
+    for entry in pymss.list_models(supported=True):
+        if model_kind == "vr" and entry.model_type != "vr":
+            continue
+        if model_kind == "mss" and entry.model_type == "vr":
+            continue
+        rows.append(
+            {
+                "name": entry.name,
+                "aliases": list(entry.aliases),
+                "model_type": entry.model_type,
+                "architecture": entry.architecture,
+                "category": entry.category_path or entry.primary_category,
+                "category_cn": " / ".join(
+                    part for part in (entry.primary_category_cn, entry.secondary_category_cn) if part
+                ),
+                "target_stem": entry.target_stem,
+                "stems": _entry_stems(entry),
+            }
+        )
+    return rows
+
+
+def _stem_names(model_name, model_kind):
+    for item in _model_catalog(model_kind):
+        if item["name"] == model_name:
+            return item["stems"]
+    return ["audio"]
+
+
+def _audio_to_numpy(audio):
+    if audio is None:
+        raise ValueError("audio input is required.")
+    waveform = audio["waveform"]
+    sample_rate = int(audio["sample_rate"])
+    if waveform.ndim != 3:
+        raise ValueError(f"Expected ComfyUI AUDIO waveform [batch, channels, samples], got shape {tuple(waveform.shape)}.")
+    if waveform.shape[0] != 1:
+        raise ValueError("pymss separation currently expects a single audio item. Split batches before this node.")
+    return waveform[0].detach().cpu().numpy().astype(np.float32, copy=False), sample_rate
+
+
+def _numpy_to_audio(value, sample_rate):
+    array = np.asarray(value, dtype=np.float32)
+    if array.ndim == 1:
+        array = array[None, :]
+    elif array.ndim == 2:
+        # pymss returns most stems as [samples, channels]. ComfyUI wants [channels, samples].
+        if array.shape[0] > array.shape[1] and array.shape[1] <= 8:
+            array = array.T
+    else:
+        raise ValueError(f"Unsupported separated stem shape: {array.shape}")
+    return {"waveform": torch.from_numpy(np.ascontiguousarray(array)).unsqueeze(0), "sample_rate": int(sample_rate)}
+
+
+def _device_ids(raw):
+    values = [int(item.strip()) for item in str(raw or "0").split(",") if item.strip()]
+    return values or [0]
+
+
+def _clean_none(params):
+    return {key: value for key, value in params.items() if value is not None}
+
+
+def _separate_audio(audio, model_name, model_kind, params, model_dir, download_missing, source, device, device_ids, use_tta, debug):
+    if model_name == MISSING_PYMSS_OPTION:
+        _import_pymss()
+
+    pymss = _import_pymss()
+    mix, sample_rate = _audio_to_numpy(audio)
+    stems = _stem_names(model_name, model_kind)
+    store_dirs = {stem: "" for stem in stems}
+
+    separator = pymss.MSSeparator.from_model_name(
+        model_name,
+        model_dir=_resolve_model_dir(model_dir),
+        download=bool(download_missing),
+        source=source,
+        device=device,
+        device_ids=_device_ids(device_ids),
+        output_format="wav",
+        use_tta=bool(use_tta),
+        store_dirs=store_dirs,
+        debug=bool(debug),
+        inference_params=params or {},
+    )
+    try:
+        results = separator.separate(mix, pbar=False, stems=None)
+    finally:
+        separator.del_cache()
+        gc.collect()
+
+    outputs = []
+    for stem in stems:
+        value = results.get(stem)
+        if value is None:
+            lower = stem.lower()
+            value = next((audio_value for key, audio_value in results.items() if key.lower() == lower), None)
+        outputs.append(_numpy_to_audio(value if value is not None else np.zeros_like(mix), sample_rate))
+
+    while len(outputs) < MAX_STEMS:
+        outputs.append(None)
+    return tuple(outputs[:MAX_STEMS])
+
+
+class PymssMssParams:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 128, "step": 1}),
+                "overlap_size": ("INT", {"default": 0, "min": 0, "max": 2147483647, "step": 1024}),
+                "chunk_size": ("INT", {"default": 0, "min": 0, "max": 2147483647, "step": 1024}),
+                "normalize": ("BOOLEAN", {"default": False}),
+                "stem_batch_size": ("INT", {"default": 0, "min": 0, "max": MAX_STEMS, "step": 1}),
+                "mask_mode": (["default", "no_segm", "soft", "hard"], {"default": "default"}),
+                "use_amp": ("BOOLEAN", {"default": True}),
+                "extra_params_json": ("STRING", {"default": "{}", "multiline": True}),
+            }
+        }
+
+    RETURN_TYPES = (MSS_PARAMS_TYPE,)
+    RETURN_NAMES = ("mss_params",)
+    FUNCTION = "build"
+    CATEGORY = CATEGORY
+
+    def build(self, batch_size, overlap_size, chunk_size, normalize, stem_batch_size, mask_mode, use_amp, extra_params_json):
+        params = {
+            "batch_size": batch_size,
+            "overlap_size": overlap_size or None,
+            "chunk_size": chunk_size or None,
+            "normalize": bool(normalize),
+            "stem_batch_size": stem_batch_size or None,
+            "mask_mode": None if mask_mode == "default" else mask_mode,
+            "use_amp": bool(use_amp),
+        }
+        params.update(_parse_extra_params(extra_params_json))
+        return (_clean_none(params),)
+
+
+class PymssVrParams:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "batch_size": ("INT", {"default": 2, "min": 1, "max": 128, "step": 1}),
+                "window_size": ("INT", {"default": 512, "min": 128, "max": 4096, "step": 128}),
+                "aggression": ("INT", {"default": 5, "min": 0, "max": 100, "step": 1}),
+                "enable_tta": ("BOOLEAN", {"default": False}),
+                "enable_post_process": ("BOOLEAN", {"default": False}),
+                "post_process_threshold": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "high_end_process": ("BOOLEAN", {"default": False}),
+                "use_amp": ("BOOLEAN", {"default": True}),
+                "extra_params_json": ("STRING", {"default": "{}", "multiline": True}),
+            }
+        }
+
+    RETURN_TYPES = (VR_PARAMS_TYPE,)
+    RETURN_NAMES = ("vr_params",)
+    FUNCTION = "build"
+    CATEGORY = CATEGORY
+
+    def build(
+        self,
+        batch_size,
+        window_size,
+        aggression,
+        enable_tta,
+        enable_post_process,
+        post_process_threshold,
+        high_end_process,
+        use_amp,
+        extra_params_json,
+    ):
+        params = {
+            "batch_size": batch_size,
+            "window_size": window_size,
+            "aggression": aggression,
+            "enable_tta": bool(enable_tta),
+            "enable_post_process": bool(enable_post_process),
+            "post_process_threshold": post_process_threshold,
+            "high_end_process": bool(high_end_process),
+            "use_amp": bool(use_amp),
+        }
+        params.update(_parse_extra_params(extra_params_json))
+        return (_clean_none(params),)
+
+
+def _parse_extra_params(raw):
+    raw = str(raw or "").strip()
+    if not raw:
+        return {}
+    parsed = json.loads(raw)
+    if not isinstance(parsed, dict):
+        raise ValueError("extra_params_json must be a JSON object.")
+    return parsed
+
+
+class _SeparateBase:
+    MODEL_KIND = "all"
+    PARAM_TYPE = "*"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "audio": ("AUDIO",),
+                "model_name": (_model_names(cls.MODEL_KIND),),
+                "device": (["auto", "cpu", "cuda", "mps", "mlx"], {"default": "auto"}),
+                "download_missing": ("BOOLEAN", {"default": False}),
+                "source": (["modelscope", "huggingface", "hf-mirror"], {"default": "modelscope"}),
+            },
+            "optional": {
+                "params": (cls.PARAM_TYPE,),
+                "model_dir": ("STRING", {"default": "", "multiline": False}),
+                "device_ids": ("STRING", {"default": "0", "multiline": False}),
+                "debug": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = ("AUDIO",) * MAX_STEMS
+    RETURN_NAMES = tuple(f"stem_{index + 1}" for index in range(MAX_STEMS))
+    FUNCTION = "separate"
+    CATEGORY = CATEGORY
+
+    def separate(
+        self,
+        audio,
+        model_name,
+        device,
+        download_missing,
+        source,
+        params=None,
+        model_dir="",
+        device_ids="0",
+        debug=False,
+    ):
+        params = dict(params or {})
+        use_tta = bool(params.pop("enable_tta", False))
+        return _separate_audio(
+            audio=audio,
+            model_name=model_name,
+            model_kind=self.MODEL_KIND,
+            params=params,
+            model_dir=model_dir,
+            download_missing=download_missing,
+            source=source,
+            device=device,
+            device_ids=device_ids,
+            use_tta=use_tta,
+            debug=debug,
+        )
+
+
+class MssSeparate(_SeparateBase):
+    MODEL_KIND = "mss"
+    PARAM_TYPE = MSS_PARAMS_TYPE
+
+
+class VrSeparate(_SeparateBase):
+    MODEL_KIND = "vr"
+    PARAM_TYPE = VR_PARAMS_TYPE
+
+
+class PymssModelList:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "model_kind": (["all", "mss", "vr"], {"default": "all"}),
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("model_metadata_json",)
+    FUNCTION = "list_models"
+    CATEGORY = CATEGORY
+
+    def list_models(self, model_kind):
+        return (json.dumps(_model_catalog(model_kind), ensure_ascii=False, indent=2),)
+
+
+if PromptServer is not None:
+    @PromptServer.instance.routes.get("/comfy-mss/models")
+    async def get_comfy_mss_models(request):
+        model_kind = request.query.get("kind", "all")
+        if model_kind not in {"all", "mss", "vr"}:
+            model_kind = "all"
+        return web.json_response(
+            {
+                "models": _model_catalog(model_kind),
+                "model_dir": _resolve_model_dir(create=True),
+                "env_vars": MODEL_DIR_ENV_VARS,
+            }
+        )
+
+
+NODE_CLASS_MAPPINGS = {
+    "mss_separate": MssSeparate,
+    "vr_separate": VrSeparate,
+    "pymss_mss_params": PymssMssParams,
+    "pymss_vr_params": PymssVrParams,
+    "PymssModelList": PymssModelList,
+}
+
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "mss_separate": "mss_separate",
+    "vr_separate": "vr_separate",
+    "pymss_mss_params": "pymss MSS Params",
+    "pymss_vr_params": "pymss VR Params",
+    "PymssModelList": "pymss Model List",
+}
