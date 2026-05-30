@@ -171,6 +171,36 @@ def _audio_batch_to_numpy(audio):
     return waveform.detach().cpu().numpy().astype(np.float32, copy=False), sample_rate
 
 
+def _match_audio_for_binary_op(audio_a, audio_b):
+    import torchaudio
+
+    if audio_a is None or audio_b is None:
+        raise ValueError("Both audio inputs are required.")
+
+    waveform_a = audio_a["waveform"].detach().cpu().float()
+    waveform_b = audio_b["waveform"].detach().cpu().float()
+    sample_rate_a = int(audio_a["sample_rate"])
+    sample_rate_b = int(audio_b["sample_rate"])
+
+    if waveform_a.ndim != 3 or waveform_b.ndim != 3:
+        raise ValueError("Expected ComfyUI AUDIO waveforms with shape [batch, channels, samples].")
+
+    if sample_rate_a != sample_rate_b:
+        waveform_b = torchaudio.functional.resample(waveform_b, sample_rate_b, sample_rate_a)
+
+    batch_size = min(waveform_a.shape[0], waveform_b.shape[0])
+    channels = min(waveform_a.shape[1], waveform_b.shape[1])
+    length = min(waveform_a.shape[2], waveform_b.shape[2])
+    if batch_size <= 0 or channels <= 0 or length <= 0:
+        raise ValueError("Audio inputs must have non-empty batch, channel, and sample dimensions.")
+
+    return (
+        waveform_a[:batch_size, :channels, :length],
+        waveform_b[:batch_size, :channels, :length],
+        sample_rate_a,
+    )
+
+
 def _numpy_to_comfy_audio(audio, sample_rate):
     array = np.asarray(audio, dtype=np.float32)
     if array.ndim == 1:
@@ -584,6 +614,32 @@ class PymssLoadAudioBatch:
         return (audios, loaded_paths)
 
 
+class PymssAudioSubtract:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "audio_a": ("AUDIO",),
+                "audio_b": ("AUDIO",),
+                "normalize_if_clipped": ("BOOLEAN", {"default": False}),
+            }
+        }
+
+    RETURN_TYPES = ("AUDIO",)
+    RETURN_NAMES = ("audio",)
+    FUNCTION = "subtract"
+    CATEGORY = CATEGORY
+
+    def subtract(self, audio_a, audio_b, normalize_if_clipped):
+        waveform_a, waveform_b, sample_rate = _match_audio_for_binary_op(audio_a, audio_b)
+        result = waveform_a - waveform_b
+        if normalize_if_clipped:
+            peak = result.abs().amax()
+            if peak > 1.0:
+                result = result / peak
+        return ({"waveform": result, "sample_rate": sample_rate},)
+
+
 class PymssSaveAudio:
     @classmethod
     def INPUT_TYPES(cls):
@@ -658,6 +714,7 @@ NODE_CLASS_MAPPINGS = {
     "pymss_vr_params": PymssVrParams,
     "PymssModelList": PymssModelList,
     "pymss_load_audio_batch": PymssLoadAudioBatch,
+    "pymss_audio_subtract": PymssAudioSubtract,
     "pymss_save_audio": PymssSaveAudio,
 }
 
@@ -668,5 +725,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "pymss_vr_params": "pymss VR Params",
     "PymssModelList": "pymss Model List",
     "pymss_load_audio_batch": "pymss Load Audio Batch",
+    "pymss_audio_subtract": "pymss Audio Subtract",
     "pymss_save_audio": "pymss Save Audio",
 }
