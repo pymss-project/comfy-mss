@@ -2,7 +2,8 @@ import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 
 import { applyLinkColorPatch, applyTypeColors, colorLink, colorNodeSlots, colorSlot } from "./comfy_mss/colors.js";
-import { AUDIO_ENSEMBLE_NODE_TYPE, LOAD_AUDIO_NODE_TYPE, SEPARATE_NODE_TYPES } from "./comfy_mss/constants.js";
+import { AUDIO_ENSEMBLE_NODE_TYPE, AUDIO_TOOL_NODE_TYPES, LOAD_AUDIO_NODE_TYPE, SEPARATE_NODE_TYPES } from "./comfy_mss/constants.js";
+import { registerAudioToolNode } from "./comfy_mss/audio_tools.js";
 import { registerAudioEnsembleNode } from "./comfy_mss/ensemble.js";
 import { registerLoadAudioNode } from "./comfy_mss/load_audio.js";
 import { registerSeparateNode } from "./comfy_mss/separate.js";
@@ -55,6 +56,11 @@ app.registerExtension({
 
     if (SEPARATE_NODE_TYPES.has(nodeData.name)) {
       registerSeparateNode(nodeType, wrapOnNodeCreated, api);
+      return;
+    }
+
+    if (AUDIO_TOOL_NODE_TYPES.has(nodeData.name)) {
+      registerAudioToolNode(wrapOnNodeCreated);
       return;
     }
 

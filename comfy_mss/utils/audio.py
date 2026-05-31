@@ -46,36 +46,6 @@ def audio_batch_to_numpy(audio):
     return waveform.detach().cpu().numpy().astype(np.float32, copy=False), sample_rate
 
 
-def match_audio_for_binary_op(audio_a, audio_b):
-    import torchaudio
-
-    if audio_a is None or audio_b is None:
-        raise ValueError("Both audio inputs are required.")
-
-    waveform_a = audio_a["waveform"].detach().cpu().float()
-    waveform_b = audio_b["waveform"].detach().cpu().float()
-    sample_rate_a = int(audio_a["sample_rate"])
-    sample_rate_b = int(audio_b["sample_rate"])
-
-    if waveform_a.ndim != 3 or waveform_b.ndim != 3:
-        raise ValueError("Expected ComfyUI AUDIO waveforms with shape [batch, channels, samples].")
-
-    if sample_rate_a != sample_rate_b:
-        waveform_b = torchaudio.functional.resample(waveform_b, sample_rate_b, sample_rate_a)
-
-    batch_size = min(waveform_a.shape[0], waveform_b.shape[0])
-    channels = min(waveform_a.shape[1], waveform_b.shape[1])
-    length = min(waveform_a.shape[2], waveform_b.shape[2])
-    if batch_size <= 0 or channels <= 0 or length <= 0:
-        raise ValueError("Audio inputs must have non-empty batch, channel, and sample dimensions.")
-
-    return (
-        waveform_a[:batch_size, :channels, :length],
-        waveform_b[:batch_size, :channels, :length],
-        sample_rate_a,
-    )
-
-
 def numpy_to_comfy_audio(audio, sample_rate):
     array = np.asarray(audio, dtype=np.float32)
     if array.ndim == 1:
@@ -245,13 +215,6 @@ def unique_output_path(save_dir, file_name, output_format):
         counter += 1
 
 
-def normalize_audio_peak(waveform, peak_target=0.999):
-    peak = float(np.max(np.abs(waveform))) if waveform.size else 0.0
-    if peak <= 0.0:
-        return waveform
-    return waveform * (float(peak_target) / peak)
-
-
 def resample_audio_batch(waveform, source_sample_rate, target_sample_rate):
     target_sample_rate = int(target_sample_rate)
     source_sample_rate = int(source_sample_rate)
@@ -270,7 +233,6 @@ def save_comfy_audio(
     output_folder,
     output_format,
     target_sample_rate,
-    normalize,
     wav_bit_depth,
     flac_bit_depth,
     mp3_bit_rate,
@@ -278,8 +240,6 @@ def save_comfy_audio(
 ):
     waveform, sample_rate = audio_batch_to_numpy(audio)
     waveform, sample_rate = resample_audio_batch(waveform, sample_rate, target_sample_rate)
-    if normalize:
-        waveform = normalize_audio_peak(waveform)
     save_dir = resolve_save_dir(output_folder)
     output_format = output_format.lower()
     audio_params = {

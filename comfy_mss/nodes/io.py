@@ -3,7 +3,7 @@ import os
 import folder_paths
 
 from ..constants import AUDIO_EXTENSIONS, CATEGORY
-from ..utils.audio import audio_name_from_path, load_audio_paths, match_audio_for_binary_op, save_comfy_audio, scan_audio_folder
+from ..utils.audio import audio_name_from_path, load_audio_paths, save_comfy_audio, scan_audio_folder
 from ..utils.ensemble import ensemble_audio_inputs
 
 
@@ -76,30 +76,52 @@ class PymssLoadAudioBatch:
         return (audios, audio_names)
 
 
-class PymssAudioSubtract:
+class PymssAudioInvertPhase:
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
                 "a": ("AUDIO",),
-                "b": ("AUDIO",),
-                "normalize_if_clipped": ("BOOLEAN", {"default": False}),
             }
         }
 
     RETURN_TYPES = ("AUDIO",)
-    RETURN_NAMES = ("a-b",)
-    FUNCTION = "subtract"
+    RETURN_NAMES = ("-a",)
+    FUNCTION = "invert"
     CATEGORY = CATEGORY
 
-    def subtract(self, a, b, normalize_if_clipped):
-        waveform_a, waveform_b, sample_rate = match_audio_for_binary_op(a, b)
-        result = waveform_a - waveform_b
-        if normalize_if_clipped:
-            peak = result.abs().amax()
-            if peak > 1.0:
-                result = result / peak
-        return ({"waveform": result, "sample_rate": sample_rate},)
+    def invert(self, a):
+        if a is None:
+            raise ValueError("audio input a is required.")
+        audio = dict(a)
+        audio["waveform"] = -a["waveform"]
+        return (audio,)
+
+
+class PymssAudioNormalize:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "audio": ("AUDIO",),
+            }
+        }
+
+    RETURN_TYPES = ("AUDIO",)
+    RETURN_NAMES = ("audio",)
+    FUNCTION = "normalize"
+    CATEGORY = CATEGORY
+
+    def normalize(self, audio):
+        if audio is None:
+            raise ValueError("audio input is required.")
+        result = dict(audio)
+        waveform = audio["waveform"].clone()
+        peak = waveform.abs().amax()
+        if peak > 1.0:
+            waveform = waveform * (0.999 / peak)
+        result["waveform"] = waveform
+        return (result,)
 
 
 class PymssAudioEnsemble:
@@ -141,7 +163,6 @@ class PymssSaveAudio:
                 "output_format": (["wav", "flac", "mp3"], {"default": "wav"}),
                 "output_folder": ("STRING", {"default": "Default", "multiline": False}),
                 "sample_rate": (["32000", "44100", "48000"], {"default": "44100"}),
-                "normalize": ("BOOLEAN", {"default": False}),
                 "wav_bit_depth": (["PCM_24", "PCM_16", "FLOAT"], {"default": "FLOAT"}),
                 "flac_bit_depth": (["PCM_16", "PCM_24"], {"default": "PCM_24"}),
                 "mp3_bit_rate": (["128k", "192k", "256k", "320k"], {"default": "320k"}),
@@ -162,7 +183,6 @@ class PymssSaveAudio:
         output_format,
         output_folder,
         sample_rate,
-        normalize,
         wav_bit_depth,
         flac_bit_depth,
         mp3_bit_rate,
@@ -173,7 +193,6 @@ class PymssSaveAudio:
             output_folder,
             output_format,
             sample_rate,
-            normalize,
             wav_bit_depth,
             flac_bit_depth,
             mp3_bit_rate,

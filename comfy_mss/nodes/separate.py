@@ -3,9 +3,9 @@ import time
 
 import comfy.utils
 import numpy as np
-import pymss
 import torch
 
+from pymss import MSSeparator
 from ..constants import CATEGORY, MSS_MAX_STEMS, MSS_PARAMS_TYPE, VR_MAX_STEMS, VR_PARAMS_TYPE
 from ..paths import resolve_model_dir
 from ..services.catalog import model_names, stem_names
@@ -42,7 +42,7 @@ def separate_audio(audio, model_name, model_kind, max_stems, params, model_dir, 
 
     with torch.inference_mode(False):
         step_start = time.perf_counter()
-        separator = pymss.MSSeparator.from_model_name(
+        separator = MSSeparator.from_model_name(
             model_name,
             model_dir=resolve_model_dir(model_dir),
             download=bool(download_missing),

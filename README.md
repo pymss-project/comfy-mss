@@ -12,7 +12,8 @@ Display names shown in ComfyUI:
 - `pymss VR Params`: optional parameter input for `pymss VR Separate`.
 - `pymss Load Audio`: loads one audio file and outputs its file name without extension.
 - `pymss Load Audio Batch`: loads audio files from a folder as a ComfyUI list output.
-- `pymss Audio Subtract`: subtracts audio input `b` from audio input `a` and outputs `a-b`.
+- `pymss Audio Invert Phase`: inverts audio input `a` and outputs `-a`.
+- `pymss Audio Normalize`: normalizes only when the peak is above 0 dBFS.
 - `pymss Save Audio`: saves ComfyUI `AUDIO` streams as `wav`, `flac`, or `mp3`.
 
 The internal node IDs are kept stable for workflow compatibility:
@@ -23,7 +24,8 @@ The internal node IDs are kept stable for workflow compatibility:
 - `pymss_vr_params`
 - `pymss_load_audio`
 - `pymss_load_audio_batch`
-- `pymss_audio_subtract`
+- `pymss_audio_invert_phase`
+- `pymss_audio_normalize`
 - `pymss_save_audio`
 
 ## Install pymss
@@ -130,7 +132,9 @@ Relative folder paths are resolved from ComfyUI's input folder. Absolute paths a
 
 Normal downstream ComfyUI nodes execute once per loaded list item, which is useful for batch separation workflows.
 
-`pymss Audio Subtract` aligns sample rate, channel count, batch size, and duration before subtracting. If durations differ, the shorter length is used.
+`pymss Audio Invert Phase` multiplies the waveform by `-1`.
+
+`pymss Audio Normalize` checks the peak level. If the peak is above `1.0`, it scales the audio to `0.999`; otherwise it leaves the audio unchanged.
 
 `pymss Save Audio` is an output node. It saves audio directly and does not need a downstream node.
 
@@ -143,7 +147,6 @@ Save behavior:
 - If `filename` is not connected or is empty, saved files fall back to `audio_YYYYMMDD_HHMMSS`.
 - Existing files are not overwritten. If a target path already exists, comfy-mss appends a numeric suffix.
 - `sample_rate`: `32000`, `44100`, or `48000`; defaults to `44100`.
-- `normalize`: when enabled, peak-normalizes the saved audio to `0.999`, slightly below 0 dBFS.
 
 Supported formats:
 
@@ -190,7 +193,7 @@ web/
 
 Module responsibilities:
 
-- `comfy_mss/nodes/io.py`: audio loading, batch audio loading, audio subtraction, and audio saving nodes.
+- `comfy_mss/nodes/io.py`: audio loading, batch audio loading, audio utility, audio ensemble, and audio saving nodes.
 - `comfy_mss/nodes/params.py`: MSS and VR params nodes.
 - `comfy_mss/nodes/separate.py`: MSS/VR separator nodes and pymss execution wrapper.
 - `comfy_mss/services/catalog.py`: pymss model catalog and stem metadata helpers.

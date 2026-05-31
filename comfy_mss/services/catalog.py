@@ -1,7 +1,8 @@
 import re
-from functools import lru_cache
-
 import pymss
+
+from functools import lru_cache
+from pymss.modules.vocal_remover.vr_models import VR_MODEL_METADATA
 
 
 def model_names(model_kind):
@@ -18,14 +19,9 @@ def entry_stems(entry):
         return stems
 
     if entry.model_type == "vr":
-        try:
-            from pymss.modules.vocal_remover.vr_models import VR_MODEL_METADATA
-
-            data = VR_MODEL_METADATA.get(entry.name)
-            if data:
-                return [data["primary_stem"], data["secondary_stem"]]
-        except Exception:
-            pass
+        data = VR_MODEL_METADATA.get(entry.name)
+        if data:
+            return [data["primary_stem"], data["secondary_stem"]]
 
     stems = split_stems(entry.target_stem)
     return stems or ["audio"]
