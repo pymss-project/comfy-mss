@@ -7,11 +7,7 @@ from functools import lru_cache
 from pymss.modules.vocal_remover.vr_models import VR_MODEL_METADATA
 
 from ..paths import resolve_model_dir
-
-
-NOT_DOWNLOADED_PREFIX = "[Not downloaded] "
-CUSTOM_MODEL_EXTENSIONS = (".ckpt", ".pth", ".pt", ".safetensors", ".safetensor", ".bin")
-CUSTOM_MODEL_DIR_NAME = "custom"
+from ..constants import NOT_DOWNLOADED_PREFIX, CUSTOM_MODEL_EXTENSIONS, CUSTOM_MODEL_DIR_NAME
 
 
 def clean_model_display_name(model_name):
@@ -81,7 +77,7 @@ def entry_stems(entry):
 
 def _load_yaml(path):
     with open(path, "r", encoding="utf-8") as handle:
-        return yaml.safe_load(handle) or {}
+        return yaml.load(handle, Loader=yaml.FullLoader) or {}
 
 
 def custom_entry_stems(config):
@@ -128,8 +124,7 @@ def custom_model_catalog(model_dir="Default/custom"):
             relpath = os.path.relpath(model_path, root).replace("\\", "/")
             try:
                 config = _load_yaml(config_path)
-            except Exception as exc:
-                print(f"[comfy-mss] failed to load custom model yaml {config_path}: {exc}")
+            except Exception:
                 continue
             rows.append(
                 {
@@ -195,9 +190,7 @@ def model_catalog(model_kind="all"):
                 "category": entry.category_path or entry.primary_category,
                 "primary_category": entry.primary_category,
                 "secondary_category": entry.secondary_category,
-                "category_cn": " / ".join(
-                    part for part in (entry.primary_category_cn, entry.secondary_category_cn) if part
-                ),
+                "category_cn": " / ".join(part for part in (entry.primary_category_cn, entry.secondary_category_cn) if part),
                 "target_stem": entry.target_stem,
                 "stems": entry_stems(entry),
             }

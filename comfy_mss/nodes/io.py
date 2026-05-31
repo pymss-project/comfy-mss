@@ -2,12 +2,9 @@ import os
 
 import folder_paths
 
-from ..constants import AUDIO_EXTENSIONS, CATEGORY
+from ..constants import AUDIO_EXTENSIONS, CATEGORY, ENSEMBLE_TYPES
 from ..utils.audio import audio_name_from_path, load_audio_paths, save_comfy_audio, scan_audio_folder
 from ..utils.ensemble import ensemble_audio_inputs
-
-
-ENSEMBLE_TYPES = ("avg_wave", "median_wave", "min_wave", "max_wave", "avg_fft", "median_fft", "min_fft", "max_fft")
 
 
 def parse_weight(value, index):
@@ -161,7 +158,7 @@ class PymssSaveAudio:
             "required": {
                 "audio": ("AUDIO",),
                 "output_format": (["wav", "flac", "mp3"], {"default": "wav"}),
-                "output_folder": ("STRING", {"default": "Default", "multiline": False}),
+                "output_folder": ("STRING", {"default": folder_paths.get_output_directory(), "multiline": False}),
                 "sample_rate": (["32000", "44100", "48000"], {"default": "44100"}),
                 "wav_bit_depth": (["PCM_24", "PCM_16", "FLOAT"], {"default": "FLOAT"}),
                 "flac_bit_depth": (["PCM_16", "PCM_24"], {"default": "PCM_24"}),

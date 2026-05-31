@@ -37,11 +37,13 @@ class PymssMssParams:
     CATEGORY = CATEGORY
 
     def build(self, batch_size, overlap_size, chunk_size, normalize, enable_tta):
-        params = clean_none({
-            "batch_size": batch_size,
-            "overlap_size": parse_default_int(overlap_size, "overlap_size"),
-            "chunk_size": parse_default_int(chunk_size, "chunk_size"),
-        })
+        params = clean_none(
+            {
+                "batch_size": batch_size,
+                "overlap_size": parse_default_int(overlap_size, "overlap_size"),
+                "chunk_size": parse_default_int(chunk_size, "chunk_size"),
+            }
+        )
         if normalize:
             params["normalize"] = True
         params["enable_tta"] = bool(enable_tta)

@@ -1,9 +1,12 @@
 import os
-
 import folder_paths
 
-from .core import coerce_optional_path
 from .constants import MODEL_DIR_ENV_VARS, MODEL_FOLDER_NAME
+
+
+def coerce_optional_path(value):
+    value = str(value or "").strip()
+    return value or None
 
 
 def default_model_dir():

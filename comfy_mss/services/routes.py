@@ -1,14 +1,8 @@
 import os
-
-try:
-    from aiohttp import web
-    from server import PromptServer
-except Exception:
-    web = None
-    PromptServer = None
-
 import folder_paths
 
+from aiohttp import web
+from server import PromptServer
 from ..constants import AUDIO_EXTENSIONS
 from ..constants import MODEL_DIR_ENV_VARS
 from ..paths import resolve_model_dir

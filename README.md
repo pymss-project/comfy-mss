@@ -174,7 +174,6 @@ Implementation code lives in `comfy_mss/`:
 ```text
 comfy_mss/
   constants.py
-  core.py
   paths.py
   nodes/
     io.py
@@ -206,7 +205,6 @@ Module responsibilities:
 - `comfy_mss/services/routes.py`: HTTP route used by the frontend extension.
 - `comfy_mss/utils/audio.py`: ComfyUI audio conversion, folder scanning, and save helpers.
 - `comfy_mss/utils/ensemble.py`: audio ensemble alignment and merge algorithms.
-- `comfy_mss/paths.py`: model directory resolution and ComfyUI model folder registration.
-- `comfy_mss/core.py`: small shared helpers.
+- `comfy_mss/paths.py`: model directory resolution, path coercion, and ComfyUI model folder registration.
 - `comfy_mss/constants.py`: shared constants.
 - `web/comfy_mss/*.js`: frontend modules split by responsibility.

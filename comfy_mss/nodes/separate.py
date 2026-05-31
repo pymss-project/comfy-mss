@@ -38,7 +38,20 @@ def make_comfy_progress_callback():
     return progress_callback
 
 
-def separate_audio(audio, model_name, model_kind, max_stems, params, model_dir, download_missing, source, device, device_ids_raw, use_tta, debug):
+def separate_audio(
+    audio,
+    model_name,
+    model_kind,
+    max_stems,
+    params,
+    model_dir,
+    download_missing,
+    source,
+    device,
+    device_ids_raw,
+    use_tta,
+    debug,
+):
     model_name = clean_model_display_name(model_name)
     timings = {}
     total_start = time.perf_counter()
@@ -194,9 +207,7 @@ class _SeparateBase:
 
     RETURN_TYPES = tuple(item for _index in range(MSS_MAX_STEMS) for item in ("AUDIO", "STRING"))
     RETURN_NAMES = tuple(
-        name
-        for index in range(MSS_MAX_STEMS)
-        for name in (f"stem_{index + 1} (Audio)", f"stem_{index + 1} (String)")
+        name for index in range(MSS_MAX_STEMS) for name in (f"stem_{index + 1} (Audio)", f"stem_{index + 1} (String)")
     )
     FUNCTION = "separate"
     CATEGORY = CATEGORY
@@ -274,9 +285,7 @@ class PymssCustomMssSeparate:
 
     RETURN_TYPES = tuple(item for _index in range(MSS_MAX_STEMS) for item in ("AUDIO", "STRING"))
     RETURN_NAMES = tuple(
-        name
-        for index in range(MSS_MAX_STEMS)
-        for name in (f"stem_{index + 1} (Audio)", f"stem_{index + 1} (String)")
+        name for index in range(MSS_MAX_STEMS) for name in (f"stem_{index + 1} (Audio)", f"stem_{index + 1} (String)")
     )
     FUNCTION = "separate"
     CATEGORY = CATEGORY
@@ -314,7 +323,5 @@ class PymssVrSeparate(_SeparateBase):
     PARAM_TYPE = VR_PARAMS_TYPE
     RETURN_TYPES = tuple(item for _index in range(VR_MAX_STEMS) for item in ("AUDIO", "STRING"))
     RETURN_NAMES = tuple(
-        name
-        for index in range(VR_MAX_STEMS)
-        for name in (f"stem_{index + 1} (Audio)", f"stem_{index + 1} (String)")
+        name for index in range(VR_MAX_STEMS) for name in (f"stem_{index + 1} (Audio)", f"stem_{index + 1} (String)")
     )
