@@ -2,17 +2,31 @@ import { MSS_MAX_STEMS, SEPARATE_MIN_NODE_WIDTH, TYPE_COLORS, VR_MAX_STEMS } fro
 import { colorNodeSlots, typeColor } from "./colors.js";
 import { disconnectOutput, getWidget } from "./utils.js";
 
-let catalog = null;
+const catalogByKind = new Map();
 const NOT_DOWNLOADED_PREFIX = "[Not downloaded] ";
 const NOT_DOWNLOADED_COLOR = "#8a8a8a";
 let notDownloadedDisplayNames = new Set();
 let menuStyleObserver = null;
 
-async function getCatalog(api, force = false) {
-  if (force || !catalog) {
-    const response = await api.fetchApi("/comfy-mss/models?kind=all");
+function catalogKey(node) {
+  if (modelKind(node) !== "custom") {
+    return "all";
+  }
+  return `custom:${String(getWidget(node, "model_dir")?.value ?? "Default/custom")}`;
+}
+
+async function getCatalog(api, node, force = false) {
+  const key = catalogKey(node);
+  if (force || !catalogByKind.has(key)) {
+    const kind = modelKind(node) === "custom" ? "custom" : "all";
+    const params = new URLSearchParams({ kind });
+    if (kind === "custom") {
+      params.set("model_dir", String(getWidget(node, "model_dir")?.value ?? "Default/custom"));
+    }
+    const response = await api.fetchApi(`/comfy-mss/models?${params}`);
     const payload = await response.json();
-    catalog = Array.isArray(payload) ? payload : payload.models;
+    const catalog = Array.isArray(payload) ? payload : payload.models;
+    catalogByKind.set(key, catalog);
     notDownloadedDisplayNames = new Set(
       catalog
         .filter((item) => item.downloaded === false)
@@ -20,10 +34,13 @@ async function getCatalog(api, force = false) {
     );
     styleOpenModelMenus();
   }
-  return catalog;
+  return catalogByKind.get(key);
 }
 
 function modelKind(node) {
+  if (node.comfyClass === "custom_mss_separate" || node.type === "custom_mss_separate") {
+    return "custom";
+  }
   return node.comfyClass === "vr_separate" || node.type === "vr_separate" ? "vr" : "mss";
 }
 
@@ -53,6 +70,9 @@ function matchesModelName(item, modelName) {
 
 function modelsForNode(models, node) {
   const kind = modelKind(node);
+  if (kind === "custom") {
+    return models;
+  }
   return models.filter((item) => (kind === "vr" ? item.model_type === "vr" : item.model_type !== "vr"));
 }
 
@@ -85,7 +105,7 @@ async function refreshModelWidgetOptions(node, api) {
   if (!widget) {
     return;
   }
-  const models = modelsForNode(await getCatalog(api, true), node);
+  const models = modelsForNode(await getCatalog(api, node, true), node);
   const values = models.map((item) => item.display_name ?? item.name);
   const currentName = cleanModelDisplayName(widget.value);
   const currentModel = models.find((item) => matchesModelName(item, currentName));
@@ -110,7 +130,7 @@ async function stemsForNode(node, api) {
     return null;
   }
   const kind = modelKind(node);
-  const models = await getCatalog(api);
+  const models = await getCatalog(api, node);
   const model = models.find(
     (item) => matchesModelName(item, modelName) && (kind === "vr" ? item.model_type === "vr" : item.model_type !== "vr")
   );
@@ -135,6 +155,8 @@ function syncOutputs(node, stems) {
   if (!stems?.length) {
     if (modelKind(node) === "vr") {
       stems = ["primary", "secondary"];
+    } else if (modelKind(node) === "custom") {
+      stems = [];
     } else {
       return;
     }
@@ -212,6 +234,15 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
       widget.callback = (value, canvas, node, pos, event) => {
         const callbackResult = callback?.call(widget, value, canvas, node, pos, event);
         scheduleRefreshNodeOutputs(this, api);
+        return callbackResult;
+      };
+    }
+    const modelDirWidget = getWidget(this, "model_dir");
+    if (modelDirWidget && modelKind(this) === "custom") {
+      const callback = modelDirWidget.callback;
+      modelDirWidget.callback = (value, canvas, node, pos, event) => {
+        const callbackResult = callback?.call(modelDirWidget, value, canvas, node, pos, event);
+        refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
         return callbackResult;
       };
     }

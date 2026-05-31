@@ -1,0 +1,21 @@
+[project]
+name = "comfy-mss"
+version = "1.0.0"
+description = "ComfyUI custom nodes for pymss music source separation."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Sucial" },
+]
+dependencies = [
+  "pymss>=2.0.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/pymss-project/comfy-mss"
+Repository = "https://github.com/pymss-project/comfy-mss"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 128

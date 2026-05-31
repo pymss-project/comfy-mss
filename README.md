@@ -7,6 +7,7 @@ ComfyUI custom nodes for [pymss](https://pypi.org/project/pymss/), a Python musi
 Display names shown in ComfyUI:
 
 - `pymss MSS Separate`: separates a ComfyUI `AUDIO` stream with non-VR pymss models.
+- `pymss Custom MSS Separate`: separates audio with user-provided MSS models from `models/pymss/custom`.
 - `pymss VR Separate`: separates a ComfyUI `AUDIO` stream with VR/UVR pymss models.
 - `pymss MSS Params`: optional parameter input for `pymss MSS Separate`.
 - `pymss VR Params`: optional parameter input for `pymss VR Separate`.
@@ -19,6 +20,7 @@ Display names shown in ComfyUI:
 The internal node IDs are kept stable for workflow compatibility:
 
 - `mss_separate`
+- `custom_mss_separate`
 - `vr_separate`
 - `pymss_mss_params`
 - `pymss_vr_params`
@@ -76,6 +78,8 @@ The frontend extension in `web/comfy_mss.js` refreshes visible outputs after a m
 Downloaded models are shown first in the `model_name` list. Each item includes its catalog category prefix, for example `[vocal/vocal_instrumental_dual] model.ckpt`. Models that are not present in the configured model folder are shown after downloaded models in gray text. The category prefix is display-only; comfy-mss strips it before looking up stems or calling pymss.
 
 `pymss MSS Separate` declares up to 16 audio/name output pairs. `pymss VR Separate` declares 2 audio/name output pairs.
+
+`pymss Custom MSS Separate` scans `Default/custom`, which resolves to `ComfyUI/models/pymss/custom` by default. The folder is created automatically. Custom model files must be paired with a same-name YAML config in the same folder, for example `my_model.ckpt` and `my_model.yaml`. Supported model extensions include `.ckpt`, `.pth`, `.pt`, `.safetensors`, `.safetensor`, and `.bin`; config files must use `.yaml`. The node reads `training.instruments` from the YAML to determine dynamic stem outputs. Use the node's `model_type` dropdown to choose the correct pymss architecture, then click `Refresh Models` after adding or changing files.
 
 Common inputs:
 

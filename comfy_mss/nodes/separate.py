@@ -8,7 +8,15 @@ import torch
 from pymss import MSSeparator
 from ..constants import CATEGORY, MSS_MAX_STEMS, MSS_PARAMS_TYPE, VR_MAX_STEMS, VR_PARAMS_TYPE
 from ..paths import resolve_model_dir
-from ..services.catalog import clean_model_display_name, model_names, stem_names
+from ..services.catalog import (
+    clean_model_display_name,
+    custom_model_dir,
+    custom_model_entry,
+    custom_model_names,
+    custom_stem_names,
+    model_names,
+    stem_names,
+)
 from ..utils.audio import audio_source_path, audio_to_numpy, numpy_to_audio
 
 
@@ -95,6 +103,72 @@ def separate_audio(audio, model_name, model_kind, max_stems, params, model_dir, 
     return tuple(paired_outputs)
 
 
+def separate_custom_audio(audio, model_name, model_type, max_stems, params, model_dir, device, device_ids_raw, use_tta, debug):
+    timings = {}
+    total_start = time.perf_counter()
+    step_start = time.perf_counter()
+    mix, sample_rate = audio_to_numpy(audio)
+    timings["audio_to_numpy"] = time.perf_counter() - step_start
+    source_path = audio_source_path(audio)
+    entry = custom_model_entry(model_name, model_dir)
+    if entry is None:
+        raise FileNotFoundError(f"custom model not found or missing yaml: {model_name}")
+    stems = custom_stem_names(model_name, model_dir)
+    store_dirs = {stem: "" for stem in stems}
+
+    with torch.inference_mode(False):
+        step_start = time.perf_counter()
+        separator = MSSeparator(
+            model_type=model_type,
+            model_path=entry["model_path"],
+            config_path=entry["config_path"],
+            device=device,
+            device_ids=device_ids(device_ids_raw),
+            output_format="wav",
+            use_tta=bool(use_tta),
+            store_dirs=store_dirs,
+            debug=bool(debug),
+            progress_callback=make_comfy_progress_callback(),
+            inference_params=params or {},
+        )
+        timings["load_model"] = time.perf_counter() - step_start
+        try:
+            step_start = time.perf_counter()
+            results = separator.separate(mix, pbar=True, stems=stems)
+            timings["separate"] = time.perf_counter() - step_start
+        finally:
+            step_start = time.perf_counter()
+            separator.del_cache()
+            gc.collect()
+            timings["cleanup"] = time.perf_counter() - step_start
+
+    step_start = time.perf_counter()
+    outputs = []
+    stem_outputs = []
+    for stem in stems:
+        value = results.get(stem)
+        if value is None:
+            lower = stem.lower()
+            value = next((audio_value for key, audio_value in results.items() if key.lower() == lower), None)
+        outputs.append(
+            numpy_to_audio(
+                value if value is not None else np.zeros_like(mix),
+                sample_rate,
+                stem_name=stem,
+                source_path=source_path,
+            )
+        )
+        stem_outputs.append(stem)
+
+    paired_outputs = []
+    for index in range(max_stems):
+        paired_outputs.append(outputs[index] if index < len(outputs) else None)
+        paired_outputs.append(stem_outputs[index] if index < len(stem_outputs) else "")
+    timings["numpy_to_audio"] = time.perf_counter() - step_start
+    timings["total"] = time.perf_counter() - total_start
+    return tuple(paired_outputs)
+
+
 class _SeparateBase:
     MODEL_KIND = "all"
     MAX_STEMS = MSS_MAX_STEMS
@@ -112,7 +186,7 @@ class _SeparateBase:
             },
             "optional": {
                 "params": (cls.PARAM_TYPE,),
-                "model_dir": ("STRING", {"default": "Default", "multiline": False}),
+                "model_dir": ("STRING", {"default": resolve_model_dir(create=True), "multiline": False}),
                 "device_ids": ("STRING", {"default": "0", "multiline": False}),
                 "debug": ("BOOLEAN", {"default": False}),
             },
@@ -161,6 +235,77 @@ class PymssMssSeparate(_SeparateBase):
     MODEL_KIND = "mss"
     MAX_STEMS = MSS_MAX_STEMS
     PARAM_TYPE = MSS_PARAMS_TYPE
+
+
+class PymssCustomMssSeparate:
+    MODEL_KIND = "custom"
+    MAX_STEMS = MSS_MAX_STEMS
+    PARAM_TYPE = MSS_PARAMS_TYPE
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "audio": ("AUDIO",),
+                "model_name": (custom_model_names(),),
+                "model_type": (
+                    [
+                        "mel_band_roformer",
+                        "bs_roformer",
+                        "bs_roformer_hyperace",
+                        "mdx23c",
+                        "htdemucs",
+                        "apollo",
+                        "bandit",
+                        "bandit_v2",
+                        "scnet",
+                    ],
+                    {"default": "mel_band_roformer"},
+                ),
+                "device": (["auto", "cpu", "cuda", "mps", "mlx"], {"default": "auto"}),
+            },
+            "optional": {
+                "params": (MSS_PARAMS_TYPE,),
+                "model_dir": ("STRING", {"default": custom_model_dir(), "multiline": False}),
+                "device_ids": ("STRING", {"default": "0", "multiline": False}),
+                "debug": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = tuple(item for _index in range(MSS_MAX_STEMS) for item in ("AUDIO", "STRING"))
+    RETURN_NAMES = tuple(
+        name
+        for index in range(MSS_MAX_STEMS)
+        for name in (f"stem_{index + 1} (Audio)", f"stem_{index + 1} (String)")
+    )
+    FUNCTION = "separate"
+    CATEGORY = CATEGORY
+
+    def separate(
+        self,
+        audio,
+        model_name,
+        model_type,
+        device,
+        params=None,
+        model_dir="Default/custom",
+        device_ids="0",
+        debug=False,
+    ):
+        params = dict(params or {})
+        use_tta = bool(params.pop("enable_tta", False))
+        return separate_custom_audio(
+            audio=audio,
+            model_name=model_name,
+            model_type=model_type,
+            max_stems=self.MAX_STEMS,
+            params=params,
+            model_dir=model_dir,
+            device=device,
+            device_ids_raw=device_ids,
+            use_tta=use_tta,
+            debug=debug,
+        )
 
 
 class PymssVrSeparate(_SeparateBase):

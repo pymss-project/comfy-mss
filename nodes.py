@@ -7,7 +7,7 @@ from .comfy_mss.nodes.io import (
     PymssSaveAudio,
 )
 from .comfy_mss.nodes.params import PymssMssParams, PymssVrParams
-from .comfy_mss.nodes.separate import PymssMssSeparate, PymssVrSeparate
+from .comfy_mss.nodes.separate import PymssCustomMssSeparate, PymssMssSeparate, PymssVrSeparate
 from .comfy_mss.services.routes import register_routes
 
 
@@ -16,6 +16,7 @@ register_routes()
 
 NODE_CLASS_MAPPINGS = {
     "mss_separate": PymssMssSeparate,
+    "custom_mss_separate": PymssCustomMssSeparate,
     "vr_separate": PymssVrSeparate,
     "pymss_mss_params": PymssMssParams,
     "pymss_vr_params": PymssVrParams,
@@ -29,6 +30,7 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "mss_separate": "MSS Separate",
+    "custom_mss_separate": "Custom MSS Separate",
     "vr_separate": "VR Separate",
     "pymss_mss_params": "MSS Params",
     "pymss_vr_params": "VR Params",

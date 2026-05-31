@@ -1,4 +1,4 @@
-export const SEPARATE_NODE_TYPES = new Set(["mss_separate", "vr_separate"]);
+export const SEPARATE_NODE_TYPES = new Set(["mss_separate", "custom_mss_separate", "vr_separate"]);
 export const LOAD_AUDIO_NODE_TYPE = "pymss_load_audio";
 export const AUDIO_ENSEMBLE_NODE_TYPE = "pymss_audio_ensemble";
 export const SAVE_AUDIO_NODE_TYPE = "pymss_save_audio";

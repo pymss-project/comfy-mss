@@ -12,7 +12,7 @@ import folder_paths
 from ..constants import AUDIO_EXTENSIONS
 from ..constants import MODEL_DIR_ENV_VARS
 from ..paths import resolve_model_dir
-from .catalog import model_catalog
+from .catalog import custom_model_catalog, model_catalog
 
 
 def _safe_upload_filename(filename):
@@ -43,11 +43,13 @@ def register_routes():
     @PromptServer.instance.routes.get("/comfy-mss/models")
     async def get_comfy_mss_models(request):
         model_kind = request.query.get("kind", "all")
-        if model_kind not in {"all", "mss", "vr"}:
+        if model_kind not in {"all", "mss", "vr", "custom"}:
             model_kind = "all"
+        model_dir = request.query.get("model_dir")
+        models = custom_model_catalog(model_dir or "Default/custom") if model_kind == "custom" else model_catalog(model_kind)
         return web.json_response(
             {
-                "models": model_catalog(model_kind),
+                "models": models,
                 "model_dir": resolve_model_dir(create=True),
                 "env_vars": MODEL_DIR_ENV_VARS,
             }
