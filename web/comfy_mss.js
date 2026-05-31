@@ -2,11 +2,20 @@ import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 
 import { applyLinkColorPatch, applyTypeColors, colorLink, colorNodeSlots, colorSlot } from "./comfy_mss/colors.js";
-import { AUDIO_ENSEMBLE_NODE_TYPE, AUDIO_TOOL_NODE_TYPES, LOAD_AUDIO_NODE_TYPE, SEPARATE_NODE_TYPES } from "./comfy_mss/constants.js";
+import {
+  AUDIO_ENSEMBLE_NODE_TYPE,
+  AUDIO_TOOL_NODE_TYPES,
+  FIXED_260_NODE_TYPES,
+  LOAD_AUDIO_NODE_TYPE,
+  SAVE_AUDIO_NODE_TYPE,
+  SEPARATE_NODE_TYPES,
+} from "./comfy_mss/constants.js";
 import { registerAudioToolNode } from "./comfy_mss/audio_tools.js";
 import { registerAudioEnsembleNode } from "./comfy_mss/ensemble.js";
 import { registerLoadAudioNode } from "./comfy_mss/load_audio.js";
+import { registerSaveAudioNode } from "./comfy_mss/save_audio.js";
 import { registerSeparateNode } from "./comfy_mss/separate.js";
+import { registerFixedWidthNode } from "./comfy_mss/sizing.js";
 
 function applyColorSetup() {
   applyTypeColors(app);
@@ -61,6 +70,16 @@ app.registerExtension({
 
     if (AUDIO_TOOL_NODE_TYPES.has(nodeData.name)) {
       registerAudioToolNode(wrapOnNodeCreated);
+      return;
+    }
+
+    if (nodeData.name === SAVE_AUDIO_NODE_TYPE) {
+      registerSaveAudioNode(nodeType, wrapOnNodeCreated);
+      return;
+    }
+
+    if (FIXED_260_NODE_TYPES.has(nodeData.name)) {
+      registerFixedWidthNode(wrapOnNodeCreated);
       return;
     }
 

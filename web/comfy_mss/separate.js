@@ -196,7 +196,7 @@ function addRefreshModelsButton(node, api) {
     return;
   }
   node.comfyMssRefreshModelsButtonAdded = true;
-  node.addWidget("button", "refresh models", null, async () => {
+  node.addWidget("button", "Refresh Models", null, async () => {
     await refreshModelWidgetOptions(node, api);
     scheduleRefreshNodeOutputs(node, api);
   });

@@ -1,13 +1,21 @@
 export const SEPARATE_NODE_TYPES = new Set(["mss_separate", "vr_separate"]);
 export const LOAD_AUDIO_NODE_TYPE = "pymss_load_audio";
 export const AUDIO_ENSEMBLE_NODE_TYPE = "pymss_audio_ensemble";
+export const SAVE_AUDIO_NODE_TYPE = "pymss_save_audio";
 export const AUDIO_TOOL_NODE_TYPES = new Set(["pymss_audio_invert_phase", "pymss_audio_normalize"]);
+export const FIXED_260_NODE_TYPES = new Set([
+  "pymss_vr_params",
+  "pymss_mss_params",
+  "pymss_load_audio_batch",
+]);
 
 export const MSS_MAX_STEMS = 16;
 export const VR_MAX_STEMS = 2;
 export const SEPARATE_MIN_NODE_WIDTH = 420;
-export const AUDIO_ENSEMBLE_MIN_NODE_WIDTH = 250;
+export const STANDARD_NODE_WIDTH = 260;
+export const AUDIO_ENSEMBLE_MIN_NODE_WIDTH = STANDARD_NODE_WIDTH;
 export const AUDIO_TOOL_MIN_NODE_WIDTH = 200;
+export const SAVE_AUDIO_MIN_NODE_WIDTH = STANDARD_NODE_WIDTH;
 
 export const TYPE_COLORS = {
   AUDIO: "#22c55e",
