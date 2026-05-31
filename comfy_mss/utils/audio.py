@@ -1,11 +1,13 @@
 import os
 import re
+import time
 
 import folder_paths
 import numpy as np
 import torch
 
-from .constants import AUDIO_EXTENSIONS
+from ..constants import AUDIO_EXTENSIONS
+from pymss.audio_io import load_audio, save_audio
 
 
 def audio_to_numpy(audio):
@@ -20,7 +22,7 @@ def audio_to_numpy(audio):
     return waveform[0].detach().cpu().numpy().astype(np.float32, copy=False), sample_rate
 
 
-def numpy_to_audio(value, sample_rate):
+def numpy_to_audio(value, sample_rate, stem_name=None, source_path=None):
     array = np.asarray(value, dtype=np.float32)
     if array.ndim == 1:
         array = array[None, :]
@@ -30,7 +32,8 @@ def numpy_to_audio(value, sample_rate):
             array = array.T
     else:
         raise ValueError(f"Unsupported separated stem shape: {array.shape}")
-    return {"waveform": torch.from_numpy(np.ascontiguousarray(array)).unsqueeze(0), "sample_rate": int(sample_rate)}
+    audio = {"waveform": torch.from_numpy(np.ascontiguousarray(array)).unsqueeze(0), "sample_rate": int(sample_rate)}
+    return attach_audio_metadata(audio, source_path=source_path, stem_name=stem_name)
 
 
 def audio_batch_to_numpy(audio):
@@ -80,6 +83,19 @@ def numpy_to_comfy_audio(audio, sample_rate):
     elif array.ndim != 2:
         raise ValueError(f"Unsupported loaded audio shape: {array.shape}")
     return {"waveform": torch.from_numpy(np.ascontiguousarray(array)).unsqueeze(0), "sample_rate": int(sample_rate)}
+
+
+def attach_audio_metadata(audio, source_path=None, stem_name=None):
+    audio = dict(audio)
+    if source_path:
+        audio["pymss_source_path"] = str(source_path)
+    if stem_name:
+        audio["pymss_stem_name"] = str(stem_name)
+    return audio
+
+
+def audio_name_from_path(path):
+    return safe_filename_part(os.path.splitext(os.path.basename(str(path or "")))[0], "")
 
 
 def resolve_input_path(path):
@@ -137,8 +153,6 @@ def scan_audio_folder(folder, recursive, extensions):
 
 
 def load_audio_paths(paths, sample_rate, mono, sort_files, limit):
-    from pymss.audio_io import load_audio
-
     unique_paths = []
     seen = set()
     for path in paths:
@@ -160,13 +174,13 @@ def load_audio_paths(paths, sample_rate, mono, sort_files, limit):
         if not os.path.isfile(path):
             raise FileNotFoundError(f"audio file does not exist: {path}")
         audio, sr = load_audio(path, sr=None if sample_rate <= 0 else sample_rate, mono=mono)
-        audios.append(numpy_to_comfy_audio(audio, sr))
-    return audios, unique_paths
+        audios.append(attach_audio_metadata(numpy_to_comfy_audio(audio, sr), source_path=path))
+    return audios, [audio_name_from_path(path) for path in unique_paths]
 
 
 def resolve_save_dir(output_folder):
     output_folder = str(output_folder or "").strip()
-    if not output_folder:
+    if not output_folder or output_folder.lower() == "default":
         save_dir = folder_paths.get_output_directory()
     elif os.path.isabs(output_folder):
         save_dir = output_folder
@@ -184,20 +198,94 @@ def safe_filename_part(value, fallback):
     return value or fallback
 
 
-def save_comfy_audio(audio, output_folder, filename_prefix, output_format, wav_bit_depth, flac_bit_depth, mp3_bit_rate, m4a_bit_rate, m4a_codec, m4a_aac_at_quality):
-    from pymss.audio_io import save_audio
+def source_stem_from_path(source_path):
+    source_path = str(source_path or "").strip().strip('"')
+    if not source_path:
+        return ""
+    stem = os.path.splitext(os.path.basename(source_path))[0]
+    return safe_filename_part(stem, "")
 
+
+def audio_source_path(audio):
+    if not isinstance(audio, dict):
+        return ""
+    return str(audio.get("pymss_source_path") or audio.get("source_path") or "")
+
+
+def audio_stem_name(audio):
+    if not isinstance(audio, dict):
+        return ""
+    stem = audio.get("pymss_stem_name") or audio.get("stem_name")
+    return safe_filename_part(stem, "") if stem else ""
+
+
+def timestamp_audio_name():
+    return f"audio_{time.strftime('%Y%m%d_%H%M%S')}"
+
+
+def make_audio_file_name(filename, audio, batch_index=None):
+    file_name = safe_filename_part(filename, "") if filename else ""
+    if not file_name:
+        file_name = timestamp_audio_name()
+    if batch_index is not None:
+        file_name = f"{file_name}_{batch_index:05d}"
+    return safe_filename_part(file_name, "audio")
+
+
+def unique_output_path(save_dir, file_name, output_format):
+    path = os.path.join(save_dir, f"{file_name}.{output_format}")
+    if not os.path.exists(path):
+        return path
+
+    counter = 1
+    while True:
+        candidate = os.path.join(save_dir, f"{file_name}_{counter:05d}.{output_format}")
+        if not os.path.exists(candidate):
+            return candidate
+        counter += 1
+
+
+def normalize_audio_peak(waveform, peak_target=0.999):
+    peak = float(np.max(np.abs(waveform))) if waveform.size else 0.0
+    if peak <= 0.0:
+        return waveform
+    return waveform * (float(peak_target) / peak)
+
+
+def resample_audio_batch(waveform, source_sample_rate, target_sample_rate):
+    target_sample_rate = int(target_sample_rate)
+    source_sample_rate = int(source_sample_rate)
+    if target_sample_rate <= 0 or target_sample_rate == source_sample_rate:
+        return waveform, source_sample_rate
+
+    import torchaudio
+
+    tensor = torch.from_numpy(np.ascontiguousarray(waveform))
+    tensor = torchaudio.functional.resample(tensor, source_sample_rate, target_sample_rate)
+    return tensor.numpy().astype(np.float32, copy=False), target_sample_rate
+
+
+def save_comfy_audio(
+    audio,
+    output_folder,
+    output_format,
+    target_sample_rate,
+    normalize,
+    wav_bit_depth,
+    flac_bit_depth,
+    mp3_bit_rate,
+    filename="",
+):
     waveform, sample_rate = audio_batch_to_numpy(audio)
+    waveform, sample_rate = resample_audio_batch(waveform, sample_rate, target_sample_rate)
+    if normalize:
+        waveform = normalize_audio_peak(waveform)
     save_dir = resolve_save_dir(output_folder)
-    prefix = safe_filename_part(filename_prefix, "ComfyUI")
     output_format = output_format.lower()
     audio_params = {
         "wav_bit_depth": wav_bit_depth,
         "flac_bit_depth": flac_bit_depth,
         "mp3_bit_rate": mp3_bit_rate,
-        "m4a_bit_rate": m4a_bit_rate,
-        "m4a_codec": m4a_codec,
-        "m4a_aac_at_quality": m4a_aac_at_quality,
     }
 
     saved_paths = []
@@ -205,9 +293,9 @@ def save_comfy_audio(audio, output_folder, filename_prefix, output_format, wav_b
     for index, item in enumerate(waveform):
         # ComfyUI AUDIO is [channels, samples]; pymss/av saving expects [samples, channels].
         audio_array = np.ascontiguousarray(item.T)
-        suffix = "" if batch_size == 1 else f"_{index:05d}"
-        file_name = f"{prefix}{suffix}"
-        path = os.path.join(save_dir, f"{file_name}.{output_format}")
+        batch_index = None if batch_size == 1 else index
+        file_name = make_audio_file_name(filename, audio, batch_index)
+        path = unique_output_path(save_dir, file_name, output_format)
         save_audio(path, audio_array, sample_rate, output_format, audio_params)
         saved_paths.append(path)
     return saved_paths

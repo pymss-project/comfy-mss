@@ -1,15 +1,11 @@
 import re
 from functools import lru_cache
 
-from .constants import MISSING_PYMSS_OPTION
-from .core import import_pymss
+import pymss
 
 
 def model_names(model_kind):
-    try:
-        return [item["name"] for item in model_catalog(model_kind)]
-    except Exception:
-        return [MISSING_PYMSS_OPTION]
+    return [item["name"] for item in model_catalog(model_kind)]
 
 
 def split_stems(value):
@@ -37,7 +33,6 @@ def entry_stems(entry):
 
 @lru_cache(maxsize=8)
 def model_catalog(model_kind="all"):
-    pymss = import_pymss()
     rows = []
     for entry in pymss.list_models(supported=True):
         if model_kind == "vr" and entry.model_type != "vr":

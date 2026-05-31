@@ -2,8 +2,8 @@ import os
 
 import folder_paths
 
-from .constants import MODEL_DIR_ENV_VARS, MODEL_FOLDER_NAME
 from .core import coerce_optional_path
+from .constants import MODEL_DIR_ENV_VARS, MODEL_FOLDER_NAME
 
 
 def default_model_dir():
@@ -11,6 +11,8 @@ def default_model_dir():
 
 
 def resolve_model_dir(model_dir=None, create=True):
+    if str(model_dir or "").strip().lower() == "default":
+        model_dir = None
     resolved = coerce_optional_path(model_dir)
     if resolved is None:
         for env_name in MODEL_DIR_ENV_VARS:
