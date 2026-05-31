@@ -8,7 +8,7 @@ import torch
 from pymss import MSSeparator
 from ..constants import CATEGORY, MSS_MAX_STEMS, MSS_PARAMS_TYPE, VR_MAX_STEMS, VR_PARAMS_TYPE
 from ..paths import resolve_model_dir
-from ..services.catalog import model_names, stem_names
+from ..services.catalog import clean_model_display_name, model_names, stem_names
 from ..utils.audio import audio_source_path, audio_to_numpy, numpy_to_audio
 
 
@@ -31,6 +31,7 @@ def make_comfy_progress_callback():
 
 
 def separate_audio(audio, model_name, model_kind, max_stems, params, model_dir, download_missing, source, device, device_ids_raw, use_tta, debug):
+    model_name = clean_model_display_name(model_name)
     timings = {}
     total_start = time.perf_counter()
     step_start = time.perf_counter()

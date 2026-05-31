@@ -73,6 +73,8 @@ Entering a path in `model_dir` overrides the environment variables for that exec
 
 The frontend extension in `web/comfy_mss.js` refreshes visible outputs after a model is selected. Each stem is exposed as an `AUDIO` output followed by a matching `STRING` stem-name output, for example `Vocals` and `Vocals_name`.
 
+Downloaded models are shown first in the `model_name` list. Each item includes its catalog category prefix, for example `[vocal/vocal_instrumental_dual] model.ckpt`. Models that are not present in the configured model folder are shown after downloaded models in gray text. The category prefix is display-only; comfy-mss strips it before looking up stems or calling pymss.
+
 `pymss MSS Separate` declares up to 16 audio/name output pairs. `pymss VR Separate` declares 2 audio/name output pairs.
 
 Common inputs:
