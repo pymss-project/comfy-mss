@@ -44,17 +44,31 @@ ComfyUI/custom_nodes
 
 ### Model Folder
 
-Model files default to: `ComfyUI/models/pymss`. The folder is created automatically when the custom node loads. The model folder can be changed with environment variables:
+Model files default to: `ComfyUI/models/pymss`. The folder is created automatically when the custom node loads.
+
+The separator nodes do not expose model folder widgets, so shared workflows do not contain machine-specific model paths. The model folder can be changed with environment variables:
 
 - `COMFY_MSS_MODEL_DIR`
 - `PYMSS_MODEL_DIR`
 
-The separator nodes expose `model_dir`, and the default widget value is the resolved absolute path currently used by ComfyUI. Resolution order:
+You can also configure an extra ComfyUI model path by copying `extra_model_paths.yaml.example` to `extra_model_paths.yaml` and adding an independent pymss config group:
 
-1. Use the value typed into `model_dir` for that node execution.
-2. If `model_dir` is empty, use `COMFY_MSS_MODEL_DIR` if set.
-3. Otherwise use `PYMSS_MODEL_DIR` if set.
-4. Otherwise use `ComfyUI/models/pymss`.
+```yaml
+comfy-mss:
+  base_path: path/to/your/model/root/
+  pymss: models
+```
+
+The outer `comfy-mss` is only the config group name. The inner `pymss` is the actual ComfyUI model folder key used by comfy-mss. With the example above, the final model folder is `path/to/your/model/root/models`.
+
+You can also use an absolute path directly:
+
+```yaml
+comfy-mss:
+  pymss: E:/AI/Models/pymss
+```
+
+If multiple `pymss` model folders are registered, comfy-mss scans them when checking whether catalog models are already downloaded. Downloads use the default `pymss` folder.
 
 ### MSS/VR Separate
 
@@ -66,7 +80,6 @@ The separator nodes expose `model_dir`, and the default widget value is the reso
 - `download_missing`: defaults to `true`.
 - `source`: `modelscope`, `huggingface`, or `hf-mirror`.
 - `params`: optional params node output.
-- `model_dir`: resolved pymss model folder path.
 - `device_ids`: defaults to `0`.
 - `debug`: prints pymss debug and timing information when enabled.
 
@@ -95,7 +108,6 @@ training:
 - `model_type`: pymss architecture type, such as `mel_band_roformer`, `bs_roformer`, `mdx23c`, or `htdemucs`.
 - `device`: `auto`, `cpu`, `cuda`, `mps`, or `mlx`.
 - `params`: optional `MSS Params` output.
-- `model_dir`: resolved custom model folder path.
 - `device_ids`: defaults to `0`.
 - `debug`: prints pymss debug and timing information when enabled.
 
@@ -171,7 +183,7 @@ Inputs:
 
 - `audio`: ComfyUI `AUDIO`.
 - `output_format`: `wav`, `flac`, or `mp3`.
-- `output_folder`: defaults to the resolved ComfyUI output directory.
+- `output_folder`: defaults to `Default`, which saves into ComfyUI's output directory.
 - `sample_rate`: `32000`, `44100`, or `48000`; defaults to `44100`.
 - `filename`: optional forced text input. Connect a composed file name such as `audio_name + "_" + stem_name`.
 

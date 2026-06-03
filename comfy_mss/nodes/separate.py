@@ -10,7 +10,6 @@ from ..constants import CATEGORY, MSS_MAX_STEMS, MSS_PARAMS_TYPE, VR_MAX_STEMS, 
 from ..paths import resolve_model_dir
 from ..services.catalog import (
     clean_model_display_name,
-    custom_model_dir,
     custom_model_entry,
     custom_model_names,
     custom_stem_names,
@@ -44,7 +43,6 @@ def separate_audio(
     model_kind,
     max_stems,
     params,
-    model_dir,
     download_missing,
     source,
     device,
@@ -66,7 +64,7 @@ def separate_audio(
         step_start = time.perf_counter()
         separator = MSSeparator.from_model_name(
             model_name,
-            model_dir=resolve_model_dir(model_dir),
+            model_dir=resolve_model_dir(),
             download=bool(download_missing),
             source=source,
             device=device,
@@ -116,17 +114,17 @@ def separate_audio(
     return tuple(paired_outputs)
 
 
-def separate_custom_audio(audio, model_name, model_type, max_stems, params, model_dir, device, device_ids_raw, use_tta, debug):
+def separate_custom_audio(audio, model_name, model_type, max_stems, params, device, device_ids_raw, use_tta, debug):
     timings = {}
     total_start = time.perf_counter()
     step_start = time.perf_counter()
     mix, sample_rate = audio_to_numpy(audio)
     timings["audio_to_numpy"] = time.perf_counter() - step_start
     source_path = audio_source_path(audio)
-    entry = custom_model_entry(model_name, model_dir)
+    entry = custom_model_entry(model_name)
     if entry is None:
         raise FileNotFoundError(f"custom model not found or missing yaml: {model_name}")
-    stems = custom_stem_names(model_name, model_dir)
+    stems = custom_stem_names(model_name)
     store_dirs = {stem: "" for stem in stems}
 
     with torch.inference_mode(False):
@@ -199,7 +197,6 @@ class _SeparateBase:
             },
             "optional": {
                 "params": (cls.PARAM_TYPE,),
-                "model_dir": ("STRING", {"default": resolve_model_dir(create=True), "multiline": False}),
                 "device_ids": ("STRING", {"default": "0", "multiline": False}),
                 "debug": ("BOOLEAN", {"default": False}),
             },
@@ -220,7 +217,6 @@ class _SeparateBase:
         download_missing,
         source,
         params=None,
-        model_dir="",
         device_ids="0",
         debug=False,
     ):
@@ -232,7 +228,6 @@ class _SeparateBase:
             model_kind=self.MODEL_KIND,
             max_stems=self.MAX_STEMS,
             params=params,
-            model_dir=model_dir,
             download_missing=download_missing,
             source=source,
             device=device,
@@ -277,7 +272,6 @@ class PymssCustomMssSeparate:
             },
             "optional": {
                 "params": (MSS_PARAMS_TYPE,),
-                "model_dir": ("STRING", {"default": custom_model_dir(), "multiline": False}),
                 "device_ids": ("STRING", {"default": "0", "multiline": False}),
                 "debug": ("BOOLEAN", {"default": False}),
             },
@@ -297,7 +291,6 @@ class PymssCustomMssSeparate:
         model_type,
         device,
         params=None,
-        model_dir="Default/custom",
         device_ids="0",
         debug=False,
     ):
@@ -309,7 +302,6 @@ class PymssCustomMssSeparate:
             model_type=model_type,
             max_stems=self.MAX_STEMS,
             params=params,
-            model_dir=model_dir,
             device=device,
             device_ids_raw=device_ids,
             use_tta=use_tta,

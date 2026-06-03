@@ -158,7 +158,7 @@ class PymssSaveAudio:
             "required": {
                 "audio": ("AUDIO",),
                 "output_format": (["wav", "flac", "mp3"], {"default": "wav"}),
-                "output_folder": ("STRING", {"default": folder_paths.get_output_directory(), "multiline": False}),
+                "output_folder": ("STRING", {"default": "Default", "multiline": False}),
                 "sample_rate": (["32000", "44100", "48000"], {"default": "44100"}),
                 "wav_bit_depth": (["PCM_24", "PCM_16", "FLOAT"], {"default": "FLOAT"}),
                 "flac_bit_depth": (["PCM_16", "PCM_24"], {"default": "PCM_24"}),

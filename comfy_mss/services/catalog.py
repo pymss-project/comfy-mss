@@ -6,7 +6,7 @@ import yaml
 from functools import lru_cache
 from pymss.modules.vocal_remover.vr_models import VR_MODEL_METADATA
 
-from ..paths import resolve_model_dir
+from ..paths import registered_model_dirs
 from ..constants import NOT_DOWNLOADED_PREFIX, CUSTOM_MODEL_EXTENSIONS, CUSTOM_MODEL_DIR_NAME
 
 
@@ -39,22 +39,21 @@ def model_names(model_kind):
     return [item["display_name"] for item in model_catalog(model_kind)]
 
 
-def custom_model_dir(model_dir="Default/custom"):
-    text = str(model_dir or "").strip()
-    if not text or text.lower() in {"default", "default/custom"}:
-        root = os.path.join(resolve_model_dir(create=True), CUSTOM_MODEL_DIR_NAME)
-    elif text.lower() == "custom":
-        root = os.path.join(resolve_model_dir(create=True), CUSTOM_MODEL_DIR_NAME)
-    elif text.replace("\\", "/").lower().endswith("/custom"):
-        root = os.path.abspath(os.path.expanduser(os.path.expandvars(text)))
-    else:
-        root = os.path.join(resolve_model_dir(text, create=True), CUSTOM_MODEL_DIR_NAME)
-    os.makedirs(root, exist_ok=True)
-    return root
+def custom_model_dirs():
+    roots = []
+    for model_dir in registered_model_dirs(create=True):
+        root = os.path.join(model_dir, CUSTOM_MODEL_DIR_NAME)
+        os.makedirs(root, exist_ok=True)
+        roots.append(root)
+    return roots
 
 
-def custom_model_names(model_dir="Default/custom"):
-    return [item["display_name"] for item in custom_model_catalog(model_dir)]
+def custom_model_dir():
+    return custom_model_dirs()[0]
+
+
+def custom_model_names():
+    return [item["display_name"] for item in custom_model_catalog()]
 
 
 def split_stems(value):
@@ -107,58 +106,63 @@ def custom_entry_model_type(config):
     return "mel_band_roformer"
 
 
-def custom_model_catalog(model_dir="Default/custom"):
-    root = custom_model_dir(model_dir)
+def custom_model_catalog():
     rows = []
-    for current_root, _dirs, files in os.walk(root):
-        file_set = set(files)
-        for filename in files:
-            stem, ext = os.path.splitext(filename)
-            if ext.lower() not in CUSTOM_MODEL_EXTENSIONS:
-                continue
-            config_name = f"{stem}.yaml"
-            if config_name not in file_set:
-                continue
-            model_path = os.path.join(current_root, filename)
-            config_path = os.path.join(current_root, config_name)
-            relpath = os.path.relpath(model_path, root).replace("\\", "/")
-            try:
-                config = _load_yaml(config_path)
-            except Exception:
-                continue
-            rows.append(
-                {
-                    "name": relpath,
-                    "display_name": relpath,
-                    "downloaded": True,
-                    "model_type": custom_entry_model_type(config),
-                    "model_path": model_path,
-                    "config_path": config_path,
-                    "stems": custom_entry_stems(config),
-                }
-            )
+    seen = set()
+    for root in custom_model_dirs():
+        for current_root, _dirs, files in os.walk(root):
+            file_set = set(files)
+            for filename in files:
+                stem, ext = os.path.splitext(filename)
+                if ext.lower() not in CUSTOM_MODEL_EXTENSIONS:
+                    continue
+                config_name = f"{stem}.yaml"
+                if config_name not in file_set:
+                    continue
+                model_path = os.path.join(current_root, filename)
+                config_path = os.path.join(current_root, config_name)
+                relpath = os.path.relpath(model_path, root).replace("\\", "/")
+                key = relpath.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                try:
+                    config = _load_yaml(config_path)
+                except Exception:
+                    continue
+                rows.append(
+                    {
+                        "name": relpath,
+                        "display_name": relpath,
+                        "downloaded": True,
+                        "model_type": custom_entry_model_type(config),
+                        "model_path": model_path,
+                        "config_path": config_path,
+                        "stems": custom_entry_stems(config),
+                    }
+                )
     rows.sort(key=lambda item: item["name"].lower())
     return rows
 
 
-def custom_model_entry(model_name, model_dir="Default/custom"):
+def custom_model_entry(model_name):
     model_name = str(model_name or "").replace("\\", "/").strip()
-    for item in custom_model_catalog(model_dir):
+    for item in custom_model_catalog():
         if item["name"] == model_name or item["display_name"] == model_name:
             return item
     return None
 
 
-def custom_stem_names(model_name, model_dir="Default/custom"):
-    entry = custom_model_entry(model_name, model_dir)
+def custom_stem_names(model_name):
+    entry = custom_model_entry(model_name)
     return entry["stems"] if entry else ["audio"]
 
 
 def is_model_downloaded(entry, model_dir=None):
     if not entry.relpath:
         return False
-    model_dir = model_dir or resolve_model_dir(create=True)
-    return os.path.isfile(os.path.join(model_dir, entry.relpath))
+    model_dirs = [model_dir] if model_dir else registered_model_dirs(create=True)
+    return any(os.path.isfile(os.path.join(path, entry.relpath)) for path in model_dirs)
 
 
 @lru_cache(maxsize=1)
@@ -170,14 +174,13 @@ def _base_model_entries():
 
 
 def model_catalog(model_kind="all"):
-    model_dir = resolve_model_dir(create=True)
     rows = []
     for entry in _base_model_entries():
         if model_kind == "vr" and entry.model_type != "vr":
             continue
         if model_kind == "mss" and entry.model_type == "vr":
             continue
-        downloaded = is_model_downloaded(entry, model_dir)
+        downloaded = is_model_downloaded(entry)
         display_name = entry_display_name(entry, downloaded)
         rows.append(
             {

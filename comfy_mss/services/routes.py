@@ -5,7 +5,7 @@ from aiohttp import web
 from server import PromptServer
 from ..constants import AUDIO_EXTENSIONS
 from ..constants import MODEL_DIR_ENV_VARS
-from ..paths import resolve_model_dir
+from ..paths import registered_model_dirs
 from .catalog import custom_model_catalog, model_catalog
 
 
@@ -39,12 +39,11 @@ def register_routes():
         model_kind = request.query.get("kind", "all")
         if model_kind not in {"all", "mss", "vr", "custom"}:
             model_kind = "all"
-        model_dir = request.query.get("model_dir")
-        models = custom_model_catalog(model_dir or "Default/custom") if model_kind == "custom" else model_catalog(model_kind)
+        models = custom_model_catalog() if model_kind == "custom" else model_catalog(model_kind)
         return web.json_response(
             {
                 "models": models,
-                "model_dir": resolve_model_dir(create=True),
+                "model_dirs": registered_model_dirs(create=True),
                 "env_vars": MODEL_DIR_ENV_VARS,
             }
         )

@@ -12,7 +12,7 @@ function catalogKey(node) {
   if (modelKind(node) !== "custom") {
     return "all";
   }
-  return `custom:${String(getWidget(node, "model_dir")?.value ?? "Default/custom")}`;
+  return "custom";
 }
 
 async function getCatalog(api, node, force = false) {
@@ -20,9 +20,6 @@ async function getCatalog(api, node, force = false) {
   if (force || !catalogByKind.has(key)) {
     const kind = modelKind(node) === "custom" ? "custom" : "all";
     const params = new URLSearchParams({ kind });
-    if (kind === "custom") {
-      params.set("model_dir", String(getWidget(node, "model_dir")?.value ?? "Default/custom"));
-    }
     const response = await api.fetchApi(`/comfy-mss/models?${params}`);
     const payload = await response.json();
     const catalog = Array.isArray(payload) ? payload : payload.models;
@@ -234,15 +231,6 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
       widget.callback = (value, canvas, node, pos, event) => {
         const callbackResult = callback?.call(widget, value, canvas, node, pos, event);
         scheduleRefreshNodeOutputs(this, api);
-        return callbackResult;
-      };
-    }
-    const modelDirWidget = getWidget(this, "model_dir");
-    if (modelDirWidget && modelKind(this) === "custom") {
-      const callback = modelDirWidget.callback;
-      modelDirWidget.callback = (value, canvas, node, pos, event) => {
-        const callbackResult = callback?.call(modelDirWidget, value, canvas, node, pos, event);
-        refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
         return callbackResult;
       };
     }

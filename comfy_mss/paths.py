@@ -13,6 +13,28 @@ def default_model_dir():
     return os.path.join(folder_paths.models_dir, MODEL_FOLDER_NAME)
 
 
+def registered_model_dirs(create=True):
+    try:
+        paths = folder_paths.get_folder_paths(MODEL_FOLDER_NAME)
+    except KeyError:
+        paths = []
+    if not paths:
+        paths = [default_model_dir()]
+
+    resolved = []
+    seen = set()
+    for path in paths:
+        value = os.path.abspath(os.path.expanduser(os.path.expandvars(path)))
+        key = os.path.normcase(value)
+        if key in seen:
+            continue
+        seen.add(key)
+        if create:
+            os.makedirs(value, exist_ok=True)
+        resolved.append(value)
+    return resolved
+
+
 def resolve_model_dir(model_dir=None, create=True):
     if str(model_dir or "").strip().lower() == "default":
         model_dir = None
@@ -23,7 +45,7 @@ def resolve_model_dir(model_dir=None, create=True):
             if resolved is not None:
                 break
     if resolved is None:
-        resolved = default_model_dir()
+        resolved = registered_model_dirs(create=create)[0]
 
     resolved = os.path.abspath(os.path.expanduser(os.path.expandvars(resolved)))
     if create:
