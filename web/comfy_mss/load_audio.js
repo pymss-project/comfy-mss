@@ -1,5 +1,6 @@
 import { getWidget } from "./utils.js";
 import { setNodeWidth } from "./sizing.js";
+import { t } from "./i18n.js";
 
 function refreshComboWidget(widget, value) {
   if (Array.isArray(widget.options?.values) && !widget.options.values.includes(value)) {
@@ -16,7 +17,7 @@ function addAudioUploadButton(node, api) {
     return;
   }
   node.comfyMssUploadButtonAdded = true;
-  node.addWidget("button", "Upload Audio", null, async () => {
+  const button = node.addWidget("button", t("uploadAudio"), null, async () => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "audio/*,video/*,.wav,.flac,.mp3,.m4a,.ogg,.aac,.aiff,.aif,.wma,.opus";
@@ -40,6 +41,7 @@ function addAudioUploadButton(node, api) {
     };
     input.click();
   });
+  button.comfyMssI18nKey = "uploadAudio";
 }
 
 export function registerLoadAudioNode(nodeType, wrapOnNodeCreated, api) {

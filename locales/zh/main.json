@@ -1,0 +1,169 @@
+{
+  "nodeDefs": {
+    "mss_separate": {
+      "title": "MSS 分离",
+      "inputs": {
+        "audio": "音频",
+        "params": "参数"
+      },
+      "widgets": {
+        "model_name": "模型名称",
+        "device": "设备",
+        "download_missing": "自动下载缺失模型",
+        "source": "下载源",
+        "device_ids": "设备 ID",
+        "debug": "调试"
+      }
+    },
+    "custom_mss_separate": {
+      "title": "自定义 MSS 分离",
+      "inputs": {
+        "audio": "音频",
+        "params": "参数"
+      },
+      "widgets": {
+        "model_name": "模型名称",
+        "model_type": "模型类型",
+        "device": "设备",
+        "device_ids": "设备 ID",
+        "debug": "调试"
+      }
+    },
+    "vr_separate": {
+      "title": "VR 分离",
+      "inputs": {
+        "audio": "音频",
+        "params": "参数"
+      },
+      "widgets": {
+        "model_name": "模型名称",
+        "device": "设备",
+        "download_missing": "自动下载缺失模型",
+        "source": "下载源",
+        "device_ids": "设备 ID",
+        "debug": "调试"
+      },
+      "outputs": {
+        "stem_1 (Audio)": "音轨 1 (音频)",
+        "stem_1 (String)": "音轨 1 (文本)",
+        "stem_2 (Audio)": "音轨 2 (音频)",
+        "stem_2 (String)": "音轨 2 (文本)"
+      }
+    },
+    "pymss_mss_params": {
+      "title": "MSS 参数",
+      "widgets": {
+        "batch_size": "批大小",
+        "overlap_size": "重叠大小",
+        "chunk_size": "分块大小",
+        "normalize": "归一化",
+        "enable_tta": "启用 TTA"
+      },
+      "outputs": {
+        "mss_params": "MSS 参数"
+      }
+    },
+    "pymss_vr_params": {
+      "title": "VR 参数",
+      "widgets": {
+        "batch_size": "批大小",
+        "window_size": "窗口大小",
+        "aggression": "分离强度",
+        "enable_tta": "启用 TTA",
+        "high_end_process": "高频处理",
+        "enable_post_process": "启用后处理",
+        "post_process_threshold": "后处理阈值"
+      },
+      "outputs": {
+        "vr_params": "VR 参数"
+      }
+    },
+    "pymss_load_audio": {
+      "title": "加载音频",
+      "widgets": {
+        "audio": "音频"
+      },
+      "outputs": {
+        "audio": "音频",
+        "audio_name": "音频名称"
+      }
+    },
+    "pymss_load_audio_batch": {
+      "title": "批量加载音频",
+      "widgets": {
+        "folder": "文件夹",
+        "recursive": "递归",
+        "sort_files": "排序文件"
+      },
+      "outputs": {
+        "audio": "音频",
+        "audio_name": "音频名称"
+      }
+    },
+    "pymss_audio_invert_phase": {
+      "title": "音频反相",
+      "inputs": {
+        "a": "a"
+      },
+      "outputs": {
+        "-a": "-a"
+      }
+    },
+    "pymss_audio_normalize": {
+      "title": "音频归一化",
+      "inputs": {
+        "audio": "音频"
+      },
+      "outputs": {
+        "audio": "音频"
+      }
+    },
+    "pymss_audio_ensemble": {
+      "title": "音频集成",
+      "widgets": {
+        "input_count": "输入数量",
+        "ensemble_type": "集成类型",
+        "weight_1": "权重 1",
+        "weight_2": "权重 2",
+        "weight_3": "权重 3",
+        "weight_4": "权重 4",
+        "weight_5": "权重 5",
+        "weight_6": "权重 6",
+        "weight_7": "权重 7",
+        "weight_8": "权重 8",
+        "weight_9": "权重 9",
+        "weight_10": "权重 10"
+      },
+      "inputs": {
+        "audio_1": "音频 1",
+        "audio_2": "音频 2",
+        "audio_3": "音频 3",
+        "audio_4": "音频 4",
+        "audio_5": "音频 5",
+        "audio_6": "音频 6",
+        "audio_7": "音频 7",
+        "audio_8": "音频 8",
+        "audio_9": "音频 9",
+        "audio_10": "音频 10"
+      },
+      "outputs": {
+        "audio": "音频"
+      }
+    },
+    "pymss_save_audio": {
+      "title": "保存音频",
+      "inputs": {
+        "audio": "音频",
+        "filename": "文件名"
+      },
+      "widgets": {
+        "output_format": "输出格式",
+        "output_folder": "输出文件夹",
+        "sample_rate": "采样率",
+        "wav_bit_depth": "WAV 位深",
+        "flac_bit_depth": "FLAC 位深",
+        "mp3_bit_rate": "MP3 比特率"
+      }
+    }
+  }
+}

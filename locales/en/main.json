@@ -1,0 +1,169 @@
+{
+  "nodeDefs": {
+    "mss_separate": {
+      "title": "MSS Separate",
+      "inputs": {
+        "audio": "audio",
+        "params": "params"
+      },
+      "widgets": {
+        "model_name": "model_name",
+        "device": "device",
+        "download_missing": "download_missing",
+        "source": "source",
+        "device_ids": "device_ids",
+        "debug": "debug"
+      }
+    },
+    "custom_mss_separate": {
+      "title": "Custom MSS Separate",
+      "inputs": {
+        "audio": "audio",
+        "params": "params"
+      },
+      "widgets": {
+        "model_name": "model_name",
+        "model_type": "model_type",
+        "device": "device",
+        "device_ids": "device_ids",
+        "debug": "debug"
+      }
+    },
+    "vr_separate": {
+      "title": "VR Separate",
+      "inputs": {
+        "audio": "audio",
+        "params": "params"
+      },
+      "widgets": {
+        "model_name": "model_name",
+        "device": "device",
+        "download_missing": "download_missing",
+        "source": "source",
+        "device_ids": "device_ids",
+        "debug": "debug"
+      },
+      "outputs": {
+        "stem_1 (Audio)": "stem_1 (Audio)",
+        "stem_1 (String)": "stem_1 (Text)",
+        "stem_2 (Audio)": "stem_2 (Audio)",
+        "stem_2 (String)": "stem_2 (Text)"
+      }
+    },
+    "pymss_mss_params": {
+      "title": "MSS Params",
+      "widgets": {
+        "batch_size": "batch_size",
+        "overlap_size": "overlap_size",
+        "chunk_size": "chunk_size",
+        "normalize": "normalize",
+        "enable_tta": "enable_tta"
+      },
+      "outputs": {
+        "mss_params": "mss_params"
+      }
+    },
+    "pymss_vr_params": {
+      "title": "VR Params",
+      "widgets": {
+        "batch_size": "batch_size",
+        "window_size": "window_size",
+        "aggression": "aggression",
+        "enable_tta": "enable_tta",
+        "high_end_process": "high_end_process",
+        "enable_post_process": "enable_post_process",
+        "post_process_threshold": "post_process_threshold"
+      },
+      "outputs": {
+        "vr_params": "vr_params"
+      }
+    },
+    "pymss_load_audio": {
+      "title": "Load Audio",
+      "widgets": {
+        "audio": "audio"
+      },
+      "outputs": {
+        "audio": "audio",
+        "audio_name": "audio_name"
+      }
+    },
+    "pymss_load_audio_batch": {
+      "title": "Load Audio Batch",
+      "widgets": {
+        "folder": "folder",
+        "recursive": "recursive",
+        "sort_files": "sort_files"
+      },
+      "outputs": {
+        "audio": "audio",
+        "audio_name": "audio_name"
+      }
+    },
+    "pymss_audio_invert_phase": {
+      "title": "Audio Invert Phase",
+      "inputs": {
+        "a": "a"
+      },
+      "outputs": {
+        "-a": "-a"
+      }
+    },
+    "pymss_audio_normalize": {
+      "title": "Audio Normalize",
+      "inputs": {
+        "audio": "audio"
+      },
+      "outputs": {
+        "audio": "audio"
+      }
+    },
+    "pymss_audio_ensemble": {
+      "title": "Audio Ensemble",
+      "widgets": {
+        "input_count": "input_count",
+        "ensemble_type": "ensemble_type",
+        "weight_1": "weight_1",
+        "weight_2": "weight_2",
+        "weight_3": "weight_3",
+        "weight_4": "weight_4",
+        "weight_5": "weight_5",
+        "weight_6": "weight_6",
+        "weight_7": "weight_7",
+        "weight_8": "weight_8",
+        "weight_9": "weight_9",
+        "weight_10": "weight_10"
+      },
+      "inputs": {
+        "audio_1": "audio_1",
+        "audio_2": "audio_2",
+        "audio_3": "audio_3",
+        "audio_4": "audio_4",
+        "audio_5": "audio_5",
+        "audio_6": "audio_6",
+        "audio_7": "audio_7",
+        "audio_8": "audio_8",
+        "audio_9": "audio_9",
+        "audio_10": "audio_10"
+      },
+      "outputs": {
+        "audio": "audio"
+      }
+    },
+    "pymss_save_audio": {
+      "title": "Save Audio",
+      "inputs": {
+        "audio": "audio",
+        "filename": "filename"
+      },
+      "widgets": {
+        "output_format": "output_format",
+        "output_folder": "output_folder",
+        "sample_rate": "sample_rate",
+        "wav_bit_depth": "wav_bit_depth",
+        "flac_bit_depth": "flac_bit_depth",
+        "mp3_bit_rate": "mp3_bit_rate"
+      }
+    }
+  }
+}

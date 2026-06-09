@@ -1,0 +1,169 @@
+{
+  "nodeDefs": {
+    "mss_separate": {
+      "title": "MSS 分離",
+      "inputs": {
+        "audio": "音声",
+        "params": "パラメータ"
+      },
+      "widgets": {
+        "model_name": "モデル名",
+        "device": "デバイス",
+        "download_missing": "不足モデルを自動ダウンロード",
+        "source": "ダウンロード元",
+        "device_ids": "デバイス ID",
+        "debug": "デバッグ"
+      }
+    },
+    "custom_mss_separate": {
+      "title": "カスタム MSS 分離",
+      "inputs": {
+        "audio": "音声",
+        "params": "パラメータ"
+      },
+      "widgets": {
+        "model_name": "モデル名",
+        "model_type": "モデルタイプ",
+        "device": "デバイス",
+        "device_ids": "デバイス ID",
+        "debug": "デバッグ"
+      }
+    },
+    "vr_separate": {
+      "title": "VR 分離",
+      "inputs": {
+        "audio": "音声",
+        "params": "パラメータ"
+      },
+      "widgets": {
+        "model_name": "モデル名",
+        "device": "デバイス",
+        "download_missing": "不足モデルを自動ダウンロード",
+        "source": "ダウンロード元",
+        "device_ids": "デバイス ID",
+        "debug": "デバッグ"
+      },
+      "outputs": {
+        "stem_1 (Audio)": "ステム 1 (音声)",
+        "stem_1 (String)": "ステム 1 (テキスト)",
+        "stem_2 (Audio)": "ステム 2 (音声)",
+        "stem_2 (String)": "ステム 2 (テキスト)"
+      }
+    },
+    "pymss_mss_params": {
+      "title": "MSS パラメータ",
+      "widgets": {
+        "batch_size": "バッチサイズ",
+        "overlap_size": "オーバーラップサイズ",
+        "chunk_size": "チャンクサイズ",
+        "normalize": "正規化",
+        "enable_tta": "TTA を有効化"
+      },
+      "outputs": {
+        "mss_params": "MSS パラメータ"
+      }
+    },
+    "pymss_vr_params": {
+      "title": "VR パラメータ",
+      "widgets": {
+        "batch_size": "バッチサイズ",
+        "window_size": "ウィンドウサイズ",
+        "aggression": "分離強度",
+        "enable_tta": "TTA を有効化",
+        "high_end_process": "高域処理",
+        "enable_post_process": "後処理を有効化",
+        "post_process_threshold": "後処理しきい値"
+      },
+      "outputs": {
+        "vr_params": "VR パラメータ"
+      }
+    },
+    "pymss_load_audio": {
+      "title": "音声を読み込み",
+      "widgets": {
+        "audio": "音声"
+      },
+      "outputs": {
+        "audio": "音声",
+        "audio_name": "音声名"
+      }
+    },
+    "pymss_load_audio_batch": {
+      "title": "音声を一括読み込み",
+      "widgets": {
+        "folder": "フォルダ",
+        "recursive": "再帰的に読み込み",
+        "sort_files": "ファイルを並べ替え"
+      },
+      "outputs": {
+        "audio": "音声",
+        "audio_name": "音声名"
+      }
+    },
+    "pymss_audio_invert_phase": {
+      "title": "音声位相反転",
+      "inputs": {
+        "a": "a"
+      },
+      "outputs": {
+        "-a": "-a"
+      }
+    },
+    "pymss_audio_normalize": {
+      "title": "音声正規化",
+      "inputs": {
+        "audio": "音声"
+      },
+      "outputs": {
+        "audio": "音声"
+      }
+    },
+    "pymss_audio_ensemble": {
+      "title": "音声アンサンブル",
+      "widgets": {
+        "input_count": "入力数",
+        "ensemble_type": "アンサンブル方式",
+        "weight_1": "重み 1",
+        "weight_2": "重み 2",
+        "weight_3": "重み 3",
+        "weight_4": "重み 4",
+        "weight_5": "重み 5",
+        "weight_6": "重み 6",
+        "weight_7": "重み 7",
+        "weight_8": "重み 8",
+        "weight_9": "重み 9",
+        "weight_10": "重み 10"
+      },
+      "inputs": {
+        "audio_1": "音声 1",
+        "audio_2": "音声 2",
+        "audio_3": "音声 3",
+        "audio_4": "音声 4",
+        "audio_5": "音声 5",
+        "audio_6": "音声 6",
+        "audio_7": "音声 7",
+        "audio_8": "音声 8",
+        "audio_9": "音声 9",
+        "audio_10": "音声 10"
+      },
+      "outputs": {
+        "audio": "音声"
+      }
+    },
+    "pymss_save_audio": {
+      "title": "音声を保存",
+      "inputs": {
+        "audio": "音声",
+        "filename": "ファイル名"
+      },
+      "widgets": {
+        "output_format": "出力形式",
+        "output_folder": "出力フォルダ",
+        "sample_rate": "サンプルレート",
+        "wav_bit_depth": "WAV ビット深度",
+        "flac_bit_depth": "FLAC ビット深度",
+        "mp3_bit_rate": "MP3 ビットレート"
+      }
+    }
+  }
+}

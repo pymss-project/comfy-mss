@@ -15,11 +15,12 @@ def clean_model_display_name(model_name):
     if name.startswith(NOT_DOWNLOADED_PREFIX):
         name = name[len(NOT_DOWNLOADED_PREFIX) :].strip()
     try:
-        for entry in _base_model_entries():
-            if name == entry.name or name in entry.aliases:
-                return entry.name
-            if name.endswith(entry.name) and name[: -len(entry.name)].strip().startswith("["):
-                return entry.name
+        for item in model_catalog("all"):
+            names = [item["name"], item["display_name"], item.get("display_name_cn"), *item.get("aliases", [])]
+            if name in names:
+                return item["name"]
+            if name.endswith(item["name"]) and name[: -len(item["name"])].strip().startswith("["):
+                return item["name"]
     except Exception:
         pass
     return name
@@ -31,12 +32,25 @@ def entry_category_label(entry):
     return f"[{value}] " if value else ""
 
 
+def entry_category_label_cn(entry):
+    parts = [entry.primary_category_cn, entry.secondary_category_cn]
+    value = "/".join(part for part in parts if part)
+    return f"[{value}] " if value else ""
+
+
 def entry_display_name(entry, downloaded):
     return f"{entry_category_label(entry)}{entry.name}"
 
 
 def model_names(model_kind):
-    return [item["display_name"] for item in model_catalog(model_kind)]
+    names = []
+    seen = set()
+    for item in model_catalog(model_kind):
+        for name in (item["display_name"], item.get("display_name_cn")):
+            if name and name not in seen:
+                seen.add(name)
+                names.append(name)
+    return names
 
 
 def custom_model_dirs():
@@ -192,8 +206,11 @@ def model_catalog(model_kind="all"):
                 "architecture": entry.architecture,
                 "category": entry.category_path or entry.primary_category,
                 "primary_category": entry.primary_category,
+                "primary_category_cn": entry.primary_category_cn,
                 "secondary_category": entry.secondary_category,
+                "secondary_category_cn": entry.secondary_category_cn,
                 "category_cn": " / ".join(part for part in (entry.primary_category_cn, entry.secondary_category_cn) if part),
+                "display_name_cn": f"{entry_category_label_cn(entry)}{entry.name}",
                 "target_stem": entry.target_stem,
                 "stems": entry_stems(entry),
             }

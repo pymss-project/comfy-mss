@@ -1,0 +1,169 @@
+{
+  "nodeDefs": {
+    "mss_separate": {
+      "title": "MSS 分離",
+      "inputs": {
+        "audio": "音訊",
+        "params": "參數"
+      },
+      "widgets": {
+        "model_name": "模型名稱",
+        "device": "裝置",
+        "download_missing": "自動下載缺少的模型",
+        "source": "下載來源",
+        "device_ids": "裝置 ID",
+        "debug": "偵錯"
+      }
+    },
+    "custom_mss_separate": {
+      "title": "自訂 MSS 分離",
+      "inputs": {
+        "audio": "音訊",
+        "params": "參數"
+      },
+      "widgets": {
+        "model_name": "模型名稱",
+        "model_type": "模型類型",
+        "device": "裝置",
+        "device_ids": "裝置 ID",
+        "debug": "偵錯"
+      }
+    },
+    "vr_separate": {
+      "title": "VR 分離",
+      "inputs": {
+        "audio": "音訊",
+        "params": "參數"
+      },
+      "widgets": {
+        "model_name": "模型名稱",
+        "device": "裝置",
+        "download_missing": "自動下載缺少的模型",
+        "source": "下載來源",
+        "device_ids": "裝置 ID",
+        "debug": "偵錯"
+      },
+      "outputs": {
+        "stem_1 (Audio)": "音軌 1 (音訊)",
+        "stem_1 (String)": "音軌 1 (文字)",
+        "stem_2 (Audio)": "音軌 2 (音訊)",
+        "stem_2 (String)": "音軌 2 (文字)"
+      }
+    },
+    "pymss_mss_params": {
+      "title": "MSS 參數",
+      "widgets": {
+        "batch_size": "批次大小",
+        "overlap_size": "重疊大小",
+        "chunk_size": "區塊大小",
+        "normalize": "正規化",
+        "enable_tta": "啟用 TTA"
+      },
+      "outputs": {
+        "mss_params": "MSS 參數"
+      }
+    },
+    "pymss_vr_params": {
+      "title": "VR 參數",
+      "widgets": {
+        "batch_size": "批次大小",
+        "window_size": "視窗大小",
+        "aggression": "分離強度",
+        "enable_tta": "啟用 TTA",
+        "high_end_process": "高頻處理",
+        "enable_post_process": "啟用後處理",
+        "post_process_threshold": "後處理閾值"
+      },
+      "outputs": {
+        "vr_params": "VR 參數"
+      }
+    },
+    "pymss_load_audio": {
+      "title": "載入音訊",
+      "widgets": {
+        "audio": "音訊"
+      },
+      "outputs": {
+        "audio": "音訊",
+        "audio_name": "音訊名稱"
+      }
+    },
+    "pymss_load_audio_batch": {
+      "title": "批次載入音訊",
+      "widgets": {
+        "folder": "資料夾",
+        "recursive": "遞迴",
+        "sort_files": "排序檔案"
+      },
+      "outputs": {
+        "audio": "音訊",
+        "audio_name": "音訊名稱"
+      }
+    },
+    "pymss_audio_invert_phase": {
+      "title": "音訊反相",
+      "inputs": {
+        "a": "a"
+      },
+      "outputs": {
+        "-a": "-a"
+      }
+    },
+    "pymss_audio_normalize": {
+      "title": "音訊正規化",
+      "inputs": {
+        "audio": "音訊"
+      },
+      "outputs": {
+        "audio": "音訊"
+      }
+    },
+    "pymss_audio_ensemble": {
+      "title": "音訊集成",
+      "widgets": {
+        "input_count": "輸入數量",
+        "ensemble_type": "集成類型",
+        "weight_1": "權重 1",
+        "weight_2": "權重 2",
+        "weight_3": "權重 3",
+        "weight_4": "權重 4",
+        "weight_5": "權重 5",
+        "weight_6": "權重 6",
+        "weight_7": "權重 7",
+        "weight_8": "權重 8",
+        "weight_9": "權重 9",
+        "weight_10": "權重 10"
+      },
+      "inputs": {
+        "audio_1": "音訊 1",
+        "audio_2": "音訊 2",
+        "audio_3": "音訊 3",
+        "audio_4": "音訊 4",
+        "audio_5": "音訊 5",
+        "audio_6": "音訊 6",
+        "audio_7": "音訊 7",
+        "audio_8": "音訊 8",
+        "audio_9": "音訊 9",
+        "audio_10": "音訊 10"
+      },
+      "outputs": {
+        "audio": "音訊"
+      }
+    },
+    "pymss_save_audio": {
+      "title": "儲存音訊",
+      "inputs": {
+        "audio": "音訊",
+        "filename": "檔案名稱"
+      },
+      "widgets": {
+        "output_format": "輸出格式",
+        "output_folder": "輸出資料夾",
+        "sample_rate": "取樣率",
+        "wav_bit_depth": "WAV 位元深度",
+        "flac_bit_depth": "FLAC 位元深度",
+        "mp3_bit_rate": "MP3 位元率"
+      }
+    }
+  }
+}

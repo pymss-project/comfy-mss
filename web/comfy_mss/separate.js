@@ -1,5 +1,6 @@
 import { MSS_MAX_STEMS, SEPARATE_MIN_NODE_WIDTH, TYPE_COLORS, VR_MAX_STEMS } from "./constants.js";
 import { colorNodeSlots, typeColor } from "./colors.js";
+import { currentLanguage, localizedModelDisplayName, t, translateNodeLabels } from "./i18n.js";
 import { disconnectOutput, getWidget } from "./utils.js";
 
 const catalogByKind = new Map();
@@ -7,6 +8,7 @@ const NOT_DOWNLOADED_PREFIX = "[Not downloaded] ";
 const NOT_DOWNLOADED_COLOR = "#8a8a8a";
 let notDownloadedDisplayNames = new Set();
 let menuStyleObserver = null;
+let notDownloadedByKey = new Map();
 
 function catalogKey(node) {
   if (modelKind(node) !== "custom") {
@@ -24,14 +26,25 @@ async function getCatalog(api, node, force = false) {
     const payload = await response.json();
     const catalog = Array.isArray(payload) ? payload : payload.models;
     catalogByKind.set(key, catalog);
-    notDownloadedDisplayNames = new Set(
-      catalog
-        .filter((item) => item.downloaded === false)
-        .map((item) => String(item.display_name ?? item.name).trim())
-    );
+    rebuildNotDownloadedDisplayNames();
     styleOpenModelMenus();
   }
   return catalogByKind.get(key);
+}
+
+function rebuildNotDownloadedDisplayNames() {
+  notDownloadedByKey = new Map();
+  for (const [key, catalog] of catalogByKind.entries()) {
+    notDownloadedByKey.set(
+      key,
+      new Set(
+        catalog
+          .filter((item) => item.downloaded === false)
+          .map((item) => String(localizedModelDisplayName(item)).trim())
+      )
+    );
+  }
+  notDownloadedDisplayNames = new Set([...notDownloadedByKey.values()].flatMap((names) => [...names]));
 }
 
 function modelKind(node) {
@@ -61,7 +74,7 @@ function normalizeModelName(value) {
 
 function matchesModelName(item, modelName) {
   const target = normalizeModelName(modelName);
-  const names = [item?.name, ...(item?.aliases ?? [])].map(normalizeModelName);
+  const names = [item?.name, item?.display_name, item?.display_name_cn, ...(item?.aliases ?? [])].map(normalizeModelName);
   return names.some((name) => target === name || target.endsWith(name));
 }
 
@@ -81,7 +94,7 @@ function styleOpenModelMenus() {
     const text = String(item.textContent ?? "").trim();
     if (notDownloadedDisplayNames.has(text)) {
       item.style.color = NOT_DOWNLOADED_COLOR;
-      item.title = "Not downloaded";
+      item.title = t("notDownloaded");
     }
   }
 }
@@ -103,14 +116,14 @@ async function refreshModelWidgetOptions(node, api) {
     return;
   }
   const models = modelsForNode(await getCatalog(api, node, true), node);
-  const values = models.map((item) => item.display_name ?? item.name);
+  const values = models.map((item) => localizedModelDisplayName(item));
   const currentName = cleanModelDisplayName(widget.value);
   const currentModel = models.find((item) => matchesModelName(item, currentName));
 
   widget.options ||= {};
   widget.options.values = values;
   if (currentModel) {
-    widget.value = currentModel.display_name ?? currentModel.name;
+    widget.value = localizedModelDisplayName(currentModel);
   } else if (widget.value && !values.includes(widget.value)) {
     widget.options.values = [widget.value, ...values];
   } else if (!widget.value && values.length) {
@@ -140,7 +153,6 @@ async function stemsForNode(node, api) {
 function setOutput(output, name, type) {
   output.name = name;
   output.label = name;
-  output.localized_name = name;
   output.type = type;
   const color = typeColor(type);
   output.color_on = color ?? output.color_on;
@@ -187,6 +199,7 @@ function syncOutputs(node, stems) {
     setOutput(node.outputs[index], outputInfo.name, outputInfo.type);
   }
 
+  translateNodeLabels(node);
   node.setSize(node.computeSize());
   node.size[0] = Math.max(node.size[0], SEPARATE_MIN_NODE_WIDTH);
   colorNodeSlots(node);
@@ -215,9 +228,31 @@ function addRefreshModelsButton(node, api) {
     return;
   }
   node.comfyMssRefreshModelsButtonAdded = true;
-  node.addWidget("button", "Refresh Models", null, async () => {
+  const button = node.addWidget("button", t("refreshModels"), null, async () => {
     await refreshModelWidgetOptions(node, api);
     scheduleRefreshNodeOutputs(node, api);
+  });
+  button.comfyMssI18nKey = "refreshModels";
+}
+
+function syncLanguage(node, api) {
+  const language = currentLanguage();
+  if (node.comfyMssSeparateLanguage === language) {
+    translateNodeLabels(node);
+    return;
+  }
+  node.comfyMssSeparateLanguage = language;
+  rebuildNotDownloadedDisplayNames();
+  for (const widget of node.widgets ?? []) {
+    if (widget.comfyMssI18nKey) {
+      const label = t(widget.comfyMssI18nKey);
+      widget.label = label;
+      widget.localized_name = label;
+    }
+  }
+  refreshModelWidgetOptions(node, api).then(() => {
+    scheduleRefreshNodeOutputs(node, api);
+    translateNodeLabels(node);
   });
 }
 
@@ -236,6 +271,7 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
     }
     refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
     scheduleRefreshNodeOutputs(this, api);
+    syncLanguage(this, api);
   });
 
   const onConfigure = nodeType.prototype.onConfigure;
@@ -245,6 +281,7 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
     setTimeout(() => {
       addRefreshModelsButton(this, api);
       refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
+      syncLanguage(this, api);
     }, 0);
     scheduleRefreshNodeOutputs(this, api);
     return result;
@@ -252,6 +289,7 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
 
   const onDrawForeground = nodeType.prototype.onDrawForeground;
   nodeType.prototype.onDrawForeground = function (...args) {
+    syncLanguage(this, api);
     colorNodeSlots(this);
     return onDrawForeground?.apply(this, args);
   };

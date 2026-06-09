@@ -1,0 +1,169 @@
+{
+  "nodeDefs": {
+    "mss_separate": {
+      "title": "MSS 분리",
+      "inputs": {
+        "audio": "오디오",
+        "params": "파라미터"
+      },
+      "widgets": {
+        "model_name": "모델 이름",
+        "device": "장치",
+        "download_missing": "누락된 모델 자동 다운로드",
+        "source": "다운로드 소스",
+        "device_ids": "장치 ID",
+        "debug": "디버그"
+      }
+    },
+    "custom_mss_separate": {
+      "title": "커스텀 MSS 분리",
+      "inputs": {
+        "audio": "오디오",
+        "params": "파라미터"
+      },
+      "widgets": {
+        "model_name": "모델 이름",
+        "model_type": "모델 타입",
+        "device": "장치",
+        "device_ids": "장치 ID",
+        "debug": "디버그"
+      }
+    },
+    "vr_separate": {
+      "title": "VR 분리",
+      "inputs": {
+        "audio": "오디오",
+        "params": "파라미터"
+      },
+      "widgets": {
+        "model_name": "모델 이름",
+        "device": "장치",
+        "download_missing": "누락된 모델 자동 다운로드",
+        "source": "다운로드 소스",
+        "device_ids": "장치 ID",
+        "debug": "디버그"
+      },
+      "outputs": {
+        "stem_1 (Audio)": "스템 1 (오디오)",
+        "stem_1 (String)": "스템 1 (텍스트)",
+        "stem_2 (Audio)": "스템 2 (오디오)",
+        "stem_2 (String)": "스템 2 (텍스트)"
+      }
+    },
+    "pymss_mss_params": {
+      "title": "MSS 파라미터",
+      "widgets": {
+        "batch_size": "배치 크기",
+        "overlap_size": "오버랩 크기",
+        "chunk_size": "청크 크기",
+        "normalize": "정규화",
+        "enable_tta": "TTA 활성화"
+      },
+      "outputs": {
+        "mss_params": "MSS 파라미터"
+      }
+    },
+    "pymss_vr_params": {
+      "title": "VR 파라미터",
+      "widgets": {
+        "batch_size": "배치 크기",
+        "window_size": "윈도우 크기",
+        "aggression": "분리 강도",
+        "enable_tta": "TTA 활성화",
+        "high_end_process": "고역 처리",
+        "enable_post_process": "후처리 활성화",
+        "post_process_threshold": "후처리 임계값"
+      },
+      "outputs": {
+        "vr_params": "VR 파라미터"
+      }
+    },
+    "pymss_load_audio": {
+      "title": "오디오 로드",
+      "widgets": {
+        "audio": "오디오"
+      },
+      "outputs": {
+        "audio": "오디오",
+        "audio_name": "오디오 이름"
+      }
+    },
+    "pymss_load_audio_batch": {
+      "title": "오디오 일괄 로드",
+      "widgets": {
+        "folder": "폴더",
+        "recursive": "재귀 검색",
+        "sort_files": "파일 정렬"
+      },
+      "outputs": {
+        "audio": "오디오",
+        "audio_name": "오디오 이름"
+      }
+    },
+    "pymss_audio_invert_phase": {
+      "title": "오디오 위상 반전",
+      "inputs": {
+        "a": "a"
+      },
+      "outputs": {
+        "-a": "-a"
+      }
+    },
+    "pymss_audio_normalize": {
+      "title": "오디오 정규화",
+      "inputs": {
+        "audio": "오디오"
+      },
+      "outputs": {
+        "audio": "오디오"
+      }
+    },
+    "pymss_audio_ensemble": {
+      "title": "오디오 앙상블",
+      "widgets": {
+        "input_count": "입력 개수",
+        "ensemble_type": "앙상블 방식",
+        "weight_1": "가중치 1",
+        "weight_2": "가중치 2",
+        "weight_3": "가중치 3",
+        "weight_4": "가중치 4",
+        "weight_5": "가중치 5",
+        "weight_6": "가중치 6",
+        "weight_7": "가중치 7",
+        "weight_8": "가중치 8",
+        "weight_9": "가중치 9",
+        "weight_10": "가중치 10"
+      },
+      "inputs": {
+        "audio_1": "오디오 1",
+        "audio_2": "오디오 2",
+        "audio_3": "오디오 3",
+        "audio_4": "오디오 4",
+        "audio_5": "오디오 5",
+        "audio_6": "오디오 6",
+        "audio_7": "오디오 7",
+        "audio_8": "오디오 8",
+        "audio_9": "오디오 9",
+        "audio_10": "오디오 10"
+      },
+      "outputs": {
+        "audio": "오디오"
+      }
+    },
+    "pymss_save_audio": {
+      "title": "오디오 저장",
+      "inputs": {
+        "audio": "오디오",
+        "filename": "파일 이름"
+      },
+      "widgets": {
+        "output_format": "출력 형식",
+        "output_folder": "출력 폴더",
+        "sample_rate": "샘플레이트",
+        "wav_bit_depth": "WAV 비트 깊이",
+        "flac_bit_depth": "FLAC 비트 깊이",
+        "mp3_bit_rate": "MP3 비트레이트"
+      }
+    }
+  }
+}
