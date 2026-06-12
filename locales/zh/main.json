@@ -57,7 +57,8 @@
         "overlap_size": "重叠大小",
         "chunk_size": "分块大小",
         "normalize": "归一化",
-        "enable_tta": "启用 TTA"
+        "enable_tta": "启用 TTA",
+        "standardize": "标准化"
       },
       "outputs": {
         "mss_params": "MSS 参数"
@@ -72,7 +73,8 @@
         "enable_tta": "启用 TTA",
         "high_end_process": "高频处理",
         "enable_post_process": "启用后处理",
-        "post_process_threshold": "后处理阈值"
+        "post_process_threshold": "后处理阈值",
+        "normalize": "归一化"
       },
       "outputs": {
         "vr_params": "VR 参数"

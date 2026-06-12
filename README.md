@@ -122,8 +122,11 @@ Click `Refresh Models` after adding, removing, or changing custom model files. I
 - `chunk_size`: defaults to `Default`.
 - `normalize`: defaults to `false`.
 - `enable_tta`: defaults to `false`.
+- `standardize`: defaults to `false`.
 
 `Default` for `overlap_size` and `chunk_size` means the selected model's YAML values are used. Enter a positive integer to override either value.
+
+`normalize` enables pymss output peak normalization. `standardize` enables pymss MSS input standardization.
 
 ### VR Params
 
@@ -134,6 +137,7 @@ Click `Refresh Models` after adding, removing, or changing custom model files. I
 - `high_end_process`: defaults to `false`.
 - `enable_post_process`: defaults to `false`.
 - `post_process_threshold`: defaults to `0.2`.
+- `normalize`: defaults to `false`.
 
 ## Audio Nodes
 
@@ -173,7 +177,7 @@ Normal downstream ComfyUI nodes execute once per loaded list item, which is usef
 - `audio_1` to `audio_10`: dynamic audio inputs.
 - `weight_1` to `weight_10`: dynamic numeric weights, defaulting to `1`.
 
-Only the selected number of audio inputs and matching weights are shown.
+Only the selected number of audio inputs and matching weights are shown. The ensemble algorithms are delegated to pymss' native ensemble implementation.
 
 ### Save Audio
 

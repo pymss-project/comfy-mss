@@ -28,6 +28,7 @@ class PymssMssParams:
                 "chunk_size": ("STRING", {"default": "Default", "multiline": False}),
                 "normalize": ("BOOLEAN", {"default": False}),
                 "enable_tta": ("BOOLEAN", {"default": False}),
+                "standardize": ("BOOLEAN", {"default": False}),
             }
         }
 
@@ -36,7 +37,7 @@ class PymssMssParams:
     FUNCTION = "build"
     CATEGORY = CATEGORY
 
-    def build(self, batch_size, overlap_size, chunk_size, normalize, enable_tta):
+    def build(self, batch_size, overlap_size, chunk_size, normalize, enable_tta, standardize=False):
         params = clean_none(
             {
                 "batch_size": batch_size,
@@ -44,9 +45,9 @@ class PymssMssParams:
                 "chunk_size": parse_default_int(chunk_size, "chunk_size"),
             }
         )
-        if normalize:
-            params["normalize"] = True
+        params["normalize"] = bool(normalize)
         params["enable_tta"] = bool(enable_tta)
+        params["standardize"] = bool(standardize)
         return (params,)
 
 
@@ -62,6 +63,7 @@ class PymssVrParams:
                 "high_end_process": ("BOOLEAN", {"default": False}),
                 "enable_post_process": ("BOOLEAN", {"default": False}),
                 "post_process_threshold": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "normalize": ("BOOLEAN", {"default": False}),
             }
         }
 
@@ -79,6 +81,7 @@ class PymssVrParams:
         high_end_process,
         enable_post_process,
         post_process_threshold,
+        normalize=False,
     ):
         params = {
             "batch_size": batch_size,
@@ -88,6 +91,7 @@ class PymssVrParams:
             "enable_post_process": bool(enable_post_process),
             "post_process_threshold": post_process_threshold,
             "high_end_process": bool(high_end_process),
+            "normalize": bool(normalize),
             "use_amp": True,
         }
         return (clean_none(params),)

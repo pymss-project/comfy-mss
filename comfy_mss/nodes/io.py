@@ -1,8 +1,9 @@
 import os
 
 import folder_paths
+from pymss.ensemble import ENSEMBLE_ALGORITHMS
 
-from ..constants import AUDIO_EXTENSIONS, CATEGORY, ENSEMBLE_TYPES
+from ..constants import AUDIO_EXTENSIONS, CATEGORY
 from ..utils.audio import audio_name_from_path, load_audio_paths, save_comfy_audio, scan_audio_folder
 from ..utils.ensemble import ensemble_audio_inputs
 
@@ -126,7 +127,7 @@ class PymssAudioEnsemble:
     def INPUT_TYPES(cls):
         required = {
             "input_count": ([str(value) for value in range(2, 11)], {"default": "2"}),
-            "ensemble_type": (list(ENSEMBLE_TYPES), {"default": "avg_wave"}),
+            "ensemble_type": (list(ENSEMBLE_ALGORITHMS), {"default": "avg_wave"}),
         }
         for index in range(1, 11):
             required[f"weight_{index}"] = ("STRING", {"default": "1", "multiline": False})

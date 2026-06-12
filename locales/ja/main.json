@@ -57,7 +57,8 @@
         "overlap_size": "オーバーラップサイズ",
         "chunk_size": "チャンクサイズ",
         "normalize": "正規化",
-        "enable_tta": "TTA を有効化"
+        "enable_tta": "TTA を有効化",
+        "standardize": "標準化"
       },
       "outputs": {
         "mss_params": "MSS パラメータ"
@@ -72,7 +73,8 @@
         "enable_tta": "TTA を有効化",
         "high_end_process": "高域処理",
         "enable_post_process": "後処理を有効化",
-        "post_process_threshold": "後処理しきい値"
+        "post_process_threshold": "後処理しきい値",
+        "normalize": "正規化"
       },
       "outputs": {
         "vr_params": "VR パラメータ"
