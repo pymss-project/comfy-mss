@@ -36,7 +36,10 @@ def ensemble_audio_inputs(audios, weights, ensemble_type):
     aligned, sample_rate = align_audio_inputs(audios)
     waveforms = torch.stack(aligned, dim=0).numpy().astype(np.float32, copy=False)
     weights = np.asarray(weights, dtype=np.float32)
-    batch_results = [average_waveforms(waveforms[:, batch_index], weights=weights, algorithm=ensemble_type) for batch_index in range(waveforms.shape[1])]
+    batch_results = [
+        average_waveforms(waveforms[:, batch_index], weights=weights, algorithm=ensemble_type)
+        for batch_index in range(waveforms.shape[1])
+    ]
     result = np.stack(batch_results, axis=0)
     waveform = torch.from_numpy(np.ascontiguousarray(result.astype(np.float32, copy=False)))
     return {"waveform": waveform, "sample_rate": sample_rate}

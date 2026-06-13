@@ -1,4 +1,3 @@
-import gc
 import time
 
 import comfy.utils
@@ -62,7 +61,7 @@ def separate_audio(
 
     with torch.inference_mode(False):
         step_start = time.perf_counter()
-        separator = MSSeparator.from_model_name(
+        with MSSeparator.from_model_name(
             model_name,
             model_dir=resolve_model_dir(),
             download=bool(download_missing),
@@ -75,17 +74,13 @@ def separate_audio(
             debug=bool(debug),
             progress_callback=make_comfy_progress_callback(),
             inference_params=params or {},
-        )
-        timings["load_model"] = time.perf_counter() - step_start
-        try:
+        ) as separator:
+            timings["load_model"] = time.perf_counter() - step_start
             step_start = time.perf_counter()
             results = separator.separate(mix, pbar=True, stems=stems)
             timings["separate"] = time.perf_counter() - step_start
-        finally:
             step_start = time.perf_counter()
-            separator.del_cache()
-            gc.collect()
-            timings["cleanup"] = time.perf_counter() - step_start
+        timings["cleanup"] = time.perf_counter() - step_start
 
     step_start = time.perf_counter()
     outputs = []
@@ -129,7 +124,7 @@ def separate_custom_audio(audio, model_name, model_type, max_stems, params, devi
 
     with torch.inference_mode(False):
         step_start = time.perf_counter()
-        separator = MSSeparator(
+        with MSSeparator(
             model_type=model_type,
             model_path=entry["model_path"],
             config_path=entry["config_path"],
@@ -141,17 +136,13 @@ def separate_custom_audio(audio, model_name, model_type, max_stems, params, devi
             debug=bool(debug),
             progress_callback=make_comfy_progress_callback(),
             inference_params=params or {},
-        )
-        timings["load_model"] = time.perf_counter() - step_start
-        try:
+        ) as separator:
+            timings["load_model"] = time.perf_counter() - step_start
             step_start = time.perf_counter()
             results = separator.separate(mix, pbar=True, stems=stems)
             timings["separate"] = time.perf_counter() - step_start
-        finally:
             step_start = time.perf_counter()
-            separator.del_cache()
-            gc.collect()
-            timings["cleanup"] = time.perf_counter() - step_start
+        timings["cleanup"] = time.perf_counter() - step_start
 
     step_start = time.perf_counter()
     outputs = []
