@@ -166,6 +166,62 @@
         "flac_bit_depth": "flac_bit_depth",
         "mp3_bit_rate": "mp3_bit_rate"
       }
+    },
+    "mss_separate_list": {
+      "title": "MSS Separate List",
+      "inputs": {
+        "audio": "audio",
+        "params": "params"
+      },
+      "widgets": {
+        "model_name": "model_name",
+        "device": "device",
+        "download_missing": "download_missing",
+        "source": "source",
+        "device_ids": "device_ids",
+        "debug": "debug"
+      },
+      "outputs": {
+        "audios": "audios",
+        "stem_names": "stem_names"
+      }
+    },
+    "custom_mss_separate_list": {
+      "title": "Custom MSS Separate List",
+      "inputs": {
+        "audio": "audio",
+        "params": "params"
+      },
+      "widgets": {
+        "model_name": "model_name",
+        "model_type": "model_type",
+        "device": "device",
+        "device_ids": "device_ids",
+        "debug": "debug"
+      },
+      "outputs": {
+        "audios": "audios",
+        "stem_names": "stem_names"
+      }
+    },
+    "vr_separate_list": {
+      "title": "VR Separate List",
+      "inputs": {
+        "audio": "audio",
+        "params": "params"
+      },
+      "widgets": {
+        "model_name": "model_name",
+        "device": "device",
+        "download_missing": "download_missing",
+        "source": "source",
+        "device_ids": "device_ids",
+        "debug": "debug"
+      },
+      "outputs": {
+        "audios": "audios",
+        "stem_names": "stem_names"
+      }
     }
   }
 }

@@ -166,6 +166,62 @@
         "flac_bit_depth": "FLAC 비트 깊이",
         "mp3_bit_rate": "MP3 비트레이트"
       }
+    },
+    "mss_separate_list": {
+      "title": "MSS 분리 목록",
+      "inputs": {
+        "audio": "오디오",
+        "params": "매개변수"
+      },
+      "widgets": {
+        "model_name": "모델 이름",
+        "device": "장치",
+        "download_missing": "누락 모델 자동 다운로드",
+        "source": "다운로드 소스",
+        "device_ids": "장치 ID",
+        "debug": "디버그"
+      },
+      "outputs": {
+        "audios": "오디오 목록",
+        "stem_names": "스템 이름 목록"
+      }
+    },
+    "custom_mss_separate_list": {
+      "title": "사용자 MSS 분리 목록",
+      "inputs": {
+        "audio": "오디오",
+        "params": "매개변수"
+      },
+      "widgets": {
+        "model_name": "모델 이름",
+        "model_type": "모델 유형",
+        "device": "장치",
+        "device_ids": "장치 ID",
+        "debug": "디버그"
+      },
+      "outputs": {
+        "audios": "오디오 목록",
+        "stem_names": "스템 이름 목록"
+      }
+    },
+    "vr_separate_list": {
+      "title": "VR 분리 목록",
+      "inputs": {
+        "audio": "오디오",
+        "params": "매개변수"
+      },
+      "widgets": {
+        "model_name": "모델 이름",
+        "device": "장치",
+        "download_missing": "누락 모델 자동 다운로드",
+        "source": "다운로드 소스",
+        "device_ids": "장치 ID",
+        "debug": "디버그"
+      },
+      "outputs": {
+        "audios": "오디오 목록",
+        "stem_names": "스템 이름 목록"
+      }
     }
   }
 }

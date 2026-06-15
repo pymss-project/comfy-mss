@@ -46,10 +46,10 @@ def model_names(model_kind):
     names = []
     seen = set()
     for item in model_catalog(model_kind):
-        for name in (item["display_name"], item.get("display_name_cn")):
-            if name and name not in seen:
-                seen.add(name)
-                names.append(name)
+        name = item["display_name"]
+        if name and name not in seen:
+            seen.add(name)
+            names.append(name)
     return names
 
 
@@ -67,7 +67,14 @@ def custom_model_dir():
 
 
 def custom_model_names():
-    return [item["display_name"] for item in custom_model_catalog()]
+    names = []
+    seen = set()
+    for item in custom_model_catalog():
+        name = item["display_name"]
+        if name and name not in seen:
+            seen.add(name)
+            names.append(name)
+    return names
 
 
 def split_stems(value):

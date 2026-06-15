@@ -166,6 +166,62 @@
         "flac_bit_depth": "FLAC 位深",
         "mp3_bit_rate": "MP3 比特率"
       }
+    },
+    "mss_separate_list": {
+      "title": "MSS 分离列表",
+      "inputs": {
+        "audio": "音频",
+        "params": "参数"
+      },
+      "widgets": {
+        "model_name": "模型名称",
+        "device": "设备",
+        "download_missing": "自动下载缺失模型",
+        "source": "下载源",
+        "device_ids": "设备 ID",
+        "debug": "调试"
+      },
+      "outputs": {
+        "audios": "音频列表",
+        "stem_names": "轨道名称列表"
+      }
+    },
+    "custom_mss_separate_list": {
+      "title": "自定义 MSS 分离列表",
+      "inputs": {
+        "audio": "音频",
+        "params": "参数"
+      },
+      "widgets": {
+        "model_name": "模型名称",
+        "model_type": "模型类型",
+        "device": "设备",
+        "device_ids": "设备 ID",
+        "debug": "调试"
+      },
+      "outputs": {
+        "audios": "音频列表",
+        "stem_names": "轨道名称列表"
+      }
+    },
+    "vr_separate_list": {
+      "title": "VR 分离列表",
+      "inputs": {
+        "audio": "音频",
+        "params": "参数"
+      },
+      "widgets": {
+        "model_name": "模型名称",
+        "device": "设备",
+        "download_missing": "自动下载缺失模型",
+        "source": "下载源",
+        "device_ids": "设备 ID",
+        "debug": "调试"
+      },
+      "outputs": {
+        "audios": "音频列表",
+        "stem_names": "轨道名称列表"
+      }
     }
   }
 }

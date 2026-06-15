@@ -36,6 +36,34 @@ def make_comfy_progress_callback():
     return progress_callback
 
 
+def collect_stem_outputs(results, stems, mix, sample_rate, source_path):
+    outputs = []
+    stem_outputs = []
+    for stem in stems:
+        value = results.get(stem)
+        if value is None:
+            lower = stem.lower()
+            value = next((audio_value for key, audio_value in results.items() if key.lower() == lower), None)
+        outputs.append(
+            numpy_to_audio(
+                value if value is not None else np.zeros_like(mix),
+                sample_rate,
+                stem_name=stem,
+                source_path=source_path,
+            )
+        )
+        stem_outputs.append(stem)
+    return outputs, stem_outputs
+
+
+def pair_stem_outputs(outputs, stem_outputs, max_stems):
+    paired_outputs = []
+    for index in range(max_stems):
+        paired_outputs.append(outputs[index] if index < len(outputs) else None)
+        paired_outputs.append(stem_outputs[index] if index < len(stem_outputs) else "")
+    return tuple(paired_outputs)
+
+
 def separate_audio(
     audio,
     model_name,
@@ -61,7 +89,7 @@ def separate_audio(
 
     with torch.inference_mode(False):
         step_start = time.perf_counter()
-        with MSSeparator.from_model_name(
+        separator = MSSeparator.from_model_name(
             model_name,
             model_dir=resolve_model_dir(),
             download=bool(download_missing),
@@ -74,39 +102,63 @@ def separate_audio(
             debug=bool(debug),
             progress_callback=make_comfy_progress_callback(),
             inference_params=params or {},
-        ) as separator:
+        )
+        try:
             timings["load_model"] = time.perf_counter() - step_start
             step_start = time.perf_counter()
             results = separator.separate(mix, pbar=True, stems=stems)
             timings["separate"] = time.perf_counter() - step_start
             step_start = time.perf_counter()
+        finally:
+            separator.close()
         timings["cleanup"] = time.perf_counter() - step_start
 
     step_start = time.perf_counter()
-    outputs = []
-    stem_outputs = []
-    for stem in stems:
-        value = results.get(stem)
-        if value is None:
-            lower = stem.lower()
-            value = next((audio_value for key, audio_value in results.items() if key.lower() == lower), None)
-        outputs.append(
-            numpy_to_audio(
-                value if value is not None else np.zeros_like(mix),
-                sample_rate,
-                stem_name=stem,
-                source_path=source_path,
-            )
-        )
-        stem_outputs.append(stem)
-
-    paired_outputs = []
-    for index in range(max_stems):
-        paired_outputs.append(outputs[index] if index < len(outputs) else None)
-        paired_outputs.append(stem_outputs[index] if index < len(stem_outputs) else "")
+    outputs, stem_outputs = collect_stem_outputs(results, stems, mix, sample_rate, source_path)
     timings["numpy_to_audio"] = time.perf_counter() - step_start
     timings["total"] = time.perf_counter() - total_start
-    return tuple(paired_outputs)
+    return pair_stem_outputs(outputs, stem_outputs, max_stems)
+
+
+def separate_audio_list(
+    audio,
+    model_name,
+    model_kind,
+    params,
+    download_missing,
+    source,
+    device,
+    device_ids_raw,
+    use_tta,
+    debug,
+):
+    model_name = clean_model_display_name(model_name)
+    mix, sample_rate = audio_to_numpy(audio)
+    source_path = audio_source_path(audio)
+    stems = stem_names(model_name, model_kind)
+    store_dirs = {stem: "" for stem in stems}
+
+    with torch.inference_mode(False):
+        separator = MSSeparator.from_model_name(
+            model_name,
+            model_dir=resolve_model_dir(),
+            download=bool(download_missing),
+            source=source,
+            device=device,
+            device_ids=device_ids(device_ids_raw),
+            output_format="wav",
+            use_tta=bool(use_tta),
+            store_dirs=store_dirs,
+            debug=bool(debug),
+            progress_callback=make_comfy_progress_callback(),
+            inference_params=params or {},
+        )
+        try:
+            results = separator.separate(mix, pbar=True, stems=stems)
+        finally:
+            separator.close()
+
+    return collect_stem_outputs(results, stems, mix, sample_rate, source_path)
 
 
 def separate_custom_audio(audio, model_name, model_type, max_stems, params, device, device_ids_raw, use_tta, debug):
@@ -124,7 +176,7 @@ def separate_custom_audio(audio, model_name, model_type, max_stems, params, devi
 
     with torch.inference_mode(False):
         step_start = time.perf_counter()
-        with MSSeparator(
+        separator = MSSeparator(
             model_type=model_type,
             model_path=entry["model_path"],
             config_path=entry["config_path"],
@@ -136,39 +188,53 @@ def separate_custom_audio(audio, model_name, model_type, max_stems, params, devi
             debug=bool(debug),
             progress_callback=make_comfy_progress_callback(),
             inference_params=params or {},
-        ) as separator:
+        )
+        try:
             timings["load_model"] = time.perf_counter() - step_start
             step_start = time.perf_counter()
             results = separator.separate(mix, pbar=True, stems=stems)
             timings["separate"] = time.perf_counter() - step_start
             step_start = time.perf_counter()
+        finally:
+            separator.close()
         timings["cleanup"] = time.perf_counter() - step_start
 
     step_start = time.perf_counter()
-    outputs = []
-    stem_outputs = []
-    for stem in stems:
-        value = results.get(stem)
-        if value is None:
-            lower = stem.lower()
-            value = next((audio_value for key, audio_value in results.items() if key.lower() == lower), None)
-        outputs.append(
-            numpy_to_audio(
-                value if value is not None else np.zeros_like(mix),
-                sample_rate,
-                stem_name=stem,
-                source_path=source_path,
-            )
-        )
-        stem_outputs.append(stem)
-
-    paired_outputs = []
-    for index in range(max_stems):
-        paired_outputs.append(outputs[index] if index < len(outputs) else None)
-        paired_outputs.append(stem_outputs[index] if index < len(stem_outputs) else "")
+    outputs, stem_outputs = collect_stem_outputs(results, stems, mix, sample_rate, source_path)
     timings["numpy_to_audio"] = time.perf_counter() - step_start
     timings["total"] = time.perf_counter() - total_start
-    return tuple(paired_outputs)
+    return pair_stem_outputs(outputs, stem_outputs, max_stems)
+
+
+def separate_custom_audio_list(audio, model_name, model_type, params, device, device_ids_raw, use_tta, debug):
+    mix, sample_rate = audio_to_numpy(audio)
+    source_path = audio_source_path(audio)
+    entry = custom_model_entry(model_name)
+    if entry is None:
+        raise FileNotFoundError(f"custom model not found or missing yaml: {model_name}")
+    stems = custom_stem_names(model_name)
+    store_dirs = {stem: "" for stem in stems}
+
+    with torch.inference_mode(False):
+        separator = MSSeparator(
+            model_type=model_type,
+            model_path=entry["model_path"],
+            config_path=entry["config_path"],
+            device=device,
+            device_ids=device_ids(device_ids_raw),
+            output_format="wav",
+            use_tta=bool(use_tta),
+            store_dirs=store_dirs,
+            debug=bool(debug),
+            progress_callback=make_comfy_progress_callback(),
+            inference_params=params or {},
+        )
+        try:
+            results = separator.separate(mix, pbar=True, stems=stems)
+        finally:
+            separator.close()
+
+    return collect_stem_outputs(results, stems, mix, sample_rate, source_path)
 
 
 class _SeparateBase:
@@ -229,6 +295,46 @@ class _SeparateBase:
 
 
 class PymssMssSeparate(_SeparateBase):
+    MODEL_KIND = "mss"
+    MAX_STEMS = MSS_MAX_STEMS
+    PARAM_TYPE = MSS_PARAMS_TYPE
+
+
+class _SeparateListBase(_SeparateBase):
+    RETURN_TYPES = ("AUDIO", "STRING")
+    RETURN_NAMES = ("audios", "stem_names")
+    OUTPUT_IS_LIST = (True, True)
+    FUNCTION = "separate"
+    CATEGORY = CATEGORY
+
+    def separate(
+        self,
+        audio,
+        model_name,
+        device,
+        download_missing,
+        source,
+        params=None,
+        device_ids="0",
+        debug=False,
+    ):
+        params = dict(params or {})
+        use_tta = bool(params.pop("enable_tta", False))
+        return separate_audio_list(
+            audio=audio,
+            model_name=model_name,
+            model_kind=self.MODEL_KIND,
+            params=params,
+            download_missing=download_missing,
+            source=source,
+            device=device,
+            device_ids_raw=device_ids,
+            use_tta=use_tta,
+            debug=debug,
+        )
+
+
+class PymssMssSeparateList(_SeparateListBase):
     MODEL_KIND = "mss"
     MAX_STEMS = MSS_MAX_STEMS
     PARAM_TYPE = MSS_PARAMS_TYPE
@@ -300,6 +406,37 @@ class PymssCustomMssSeparate:
         )
 
 
+class PymssCustomMssSeparateList(PymssCustomMssSeparate):
+    RETURN_TYPES = ("AUDIO", "STRING")
+    RETURN_NAMES = ("audios", "stem_names")
+    OUTPUT_IS_LIST = (True, True)
+    FUNCTION = "separate"
+    CATEGORY = CATEGORY
+
+    def separate(
+        self,
+        audio,
+        model_name,
+        model_type,
+        device,
+        params=None,
+        device_ids="0",
+        debug=False,
+    ):
+        params = dict(params or {})
+        use_tta = bool(params.pop("enable_tta", False))
+        return separate_custom_audio_list(
+            audio=audio,
+            model_name=model_name,
+            model_type=model_type,
+            params=params,
+            device=device,
+            device_ids_raw=device_ids,
+            use_tta=use_tta,
+            debug=debug,
+        )
+
+
 class PymssVrSeparate(_SeparateBase):
     MODEL_KIND = "vr"
     MAX_STEMS = VR_MAX_STEMS
@@ -308,3 +445,9 @@ class PymssVrSeparate(_SeparateBase):
     RETURN_NAMES = tuple(
         name for index in range(VR_MAX_STEMS) for name in (f"stem_{index + 1} (Audio)", f"stem_{index + 1} (String)")
     )
+
+
+class PymssVrSeparateList(_SeparateListBase):
+    MODEL_KIND = "vr"
+    MAX_STEMS = VR_MAX_STEMS
+    PARAM_TYPE = VR_PARAMS_TYPE
