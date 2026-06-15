@@ -339,6 +339,10 @@ class PymssMssSeparateList(_SeparateListBase):
     MAX_STEMS = MSS_MAX_STEMS
     PARAM_TYPE = MSS_PARAMS_TYPE
 
+    @classmethod
+    def INPUT_TYPES(cls):
+        return PymssMssSeparate.INPUT_TYPES()
+
 
 class PymssCustomMssSeparate:
     MODEL_KIND = "custom"
@@ -413,6 +417,10 @@ class PymssCustomMssSeparateList(PymssCustomMssSeparate):
     FUNCTION = "separate"
     CATEGORY = CATEGORY
 
+    @classmethod
+    def INPUT_TYPES(cls):
+        return PymssCustomMssSeparate.INPUT_TYPES()
+
     def separate(
         self,
         audio,
@@ -451,3 +459,7 @@ class PymssVrSeparateList(_SeparateListBase):
     MODEL_KIND = "vr"
     MAX_STEMS = VR_MAX_STEMS
     PARAM_TYPE = VR_PARAMS_TYPE
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return PymssVrSeparate.INPUT_TYPES()
