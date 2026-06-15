@@ -48,10 +48,26 @@ function rebuildNotDownloadedDisplayNames() {
 }
 
 function modelKind(node) {
-  if (node.comfyClass === "custom_mss_separate" || node.type === "custom_mss_separate") {
+  if (
+    node.comfyClass === "custom_mss_separate" ||
+    node.type === "custom_mss_separate" ||
+    node.comfyClass === "custom_mss_separate_list" ||
+    node.type === "custom_mss_separate_list"
+  ) {
     return "custom";
   }
-  return node.comfyClass === "vr_separate" || node.type === "vr_separate" ? "vr" : "mss";
+  return (
+    node.comfyClass === "vr_separate" ||
+    node.type === "vr_separate" ||
+    node.comfyClass === "vr_separate_list" ||
+    node.type === "vr_separate_list"
+  )
+    ? "vr"
+    : "mss";
+}
+
+function isListNode(node) {
+  return String(node.comfyClass ?? node.type ?? "").endsWith("_list");
 }
 
 function maxStems(node) {
@@ -209,6 +225,9 @@ function syncOutputs(node, stems) {
 }
 
 async function refreshNodeOutputs(node, api) {
+  if (isListNode(node)) {
+    return;
+  }
   try {
     syncOutputs(node, await stemsForNode(node, api));
   } catch (error) {

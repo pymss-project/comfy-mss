@@ -130,7 +130,7 @@ app.registerExtension({
       return;
     }
 
-    if (SEPARATE_NODE_TYPES.has(nodeData.name)) {
+    if (SEPARATE_NODE_TYPES.has(nodeData.name) || SEPARATE_LIST_NODE_TYPES.has(nodeData.name)) {
       registerSeparateNode(nodeType, wrapOnNodeCreated, api);
       return;
     }
