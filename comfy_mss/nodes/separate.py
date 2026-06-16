@@ -1,4 +1,5 @@
 import time
+from contextlib import closing
 
 import comfy.utils
 import numpy as np
@@ -89,7 +90,7 @@ def separate_audio(
 
     with torch.inference_mode(False):
         step_start = time.perf_counter()
-        with MSSeparator.from_model_name(
+        with closing(MSSeparator.from_model_name(
             model_name,
             model_dir=resolve_model_dir(),
             download=bool(download_missing),
@@ -102,7 +103,7 @@ def separate_audio(
             debug=bool(debug),
             progress_callback=make_comfy_progress_callback(),
             inference_params=params or {},
-        ) as separator:
+        )) as separator:
             timings["load_model"] = time.perf_counter() - step_start
             step_start = time.perf_counter()
             results = separator.separate(mix, pbar=True, stems=stems)
@@ -136,7 +137,7 @@ def separate_audio_list(
     store_dirs = {stem: "" for stem in stems}
 
     with torch.inference_mode(False):
-        with MSSeparator.from_model_name(
+        with closing(MSSeparator.from_model_name(
             model_name,
             model_dir=resolve_model_dir(),
             download=bool(download_missing),
@@ -149,7 +150,7 @@ def separate_audio_list(
             debug=bool(debug),
             progress_callback=make_comfy_progress_callback(),
             inference_params=params or {},
-        ) as separator:
+        )) as separator:
             results = separator.separate(mix, pbar=True, stems=stems)
 
     return collect_stem_outputs(results, stems, mix, sample_rate, source_path)
@@ -170,7 +171,7 @@ def separate_custom_audio(audio, model_name, model_type, max_stems, params, devi
 
     with torch.inference_mode(False):
         step_start = time.perf_counter()
-        with MSSeparator(
+        with closing(MSSeparator(
             model_type=model_type,
             model_path=entry["model_path"],
             config_path=entry["config_path"],
@@ -182,7 +183,7 @@ def separate_custom_audio(audio, model_name, model_type, max_stems, params, devi
             debug=bool(debug),
             progress_callback=make_comfy_progress_callback(),
             inference_params=params or {},
-        ) as separator:
+        )) as separator:
             timings["load_model"] = time.perf_counter() - step_start
             step_start = time.perf_counter()
             results = separator.separate(mix, pbar=True, stems=stems)
@@ -207,7 +208,7 @@ def separate_custom_audio_list(audio, model_name, model_type, params, device, de
     store_dirs = {stem: "" for stem in stems}
 
     with torch.inference_mode(False):
-        with MSSeparator(
+        with closing(MSSeparator(
             model_type=model_type,
             model_path=entry["model_path"],
             config_path=entry["config_path"],
@@ -219,7 +220,7 @@ def separate_custom_audio_list(audio, model_name, model_type, params, device, de
             debug=bool(debug),
             progress_callback=make_comfy_progress_callback(),
             inference_params=params or {},
-        ) as separator:
+        )) as separator:
             results = separator.separate(mix, pbar=True, stems=stems)
 
     return collect_stem_outputs(results, stems, mix, sample_rate, source_path)
