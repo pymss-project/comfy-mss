@@ -1,4 +1,4 @@
-import { MSS_MAX_STEMS, SEPARATE_MIN_NODE_WIDTH, STANDARD_NODE_WIDTH, TYPE_COLORS, VR_MAX_STEMS } from "./constants.js";
+import { FIXED_260_NODE_TYPES, MSS_MAX_STEMS, SEPARATE_MIN_NODE_WIDTH, STANDARD_NODE_WIDTH, TYPE_COLORS, VR_MAX_STEMS } from "./constants.js";
 import { colorNodeSlots, typeColor } from "./colors.js";
 import { currentLanguage, localizedModelDisplayName, t, translateNodeLabels } from "./i18n.js";
 import { setNodeWidth } from "./sizing.js";
@@ -69,6 +69,10 @@ function modelKind(node) {
 
 function isListNode(node) {
   return String(node.comfyClass ?? node.type ?? "").endsWith("_list");
+}
+
+function shouldUseFixedWidth(node) {
+  return FIXED_260_NODE_TYPES.has(String(node.comfyClass ?? node.type ?? ""));
 }
 
 function maxStems(node) {
@@ -292,7 +296,7 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
     refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
     scheduleRefreshNodeOutputs(this, api);
     syncLanguage(this, api);
-    if (isListNode(this)) {
+    if (shouldUseFixedWidth(this)) {
       setNodeWidth(this, STANDARD_NODE_WIDTH);
     }
   });
@@ -305,7 +309,7 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
       addRefreshModelsButton(this, api);
       refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
       syncLanguage(this, api);
-      if (isListNode(this)) {
+      if (shouldUseFixedWidth(this)) {
         setNodeWidth(this, STANDARD_NODE_WIDTH);
       }
     }, 0);
