@@ -166,6 +166,62 @@
         "flac_bit_depth": "FLAC ビット深度",
         "mp3_bit_rate": "MP3 ビットレート"
       }
+    },
+    "mss_separate_list": {
+      "title": "MSS 分離リスト",
+      "inputs": {
+        "audio": "オーディオ",
+        "params": "パラメータ"
+      },
+      "widgets": {
+        "model_name": "モデル名",
+        "device": "デバイス",
+        "download_missing": "不足モデルを自動ダウンロード",
+        "source": "ダウンロード元",
+        "device_ids": "デバイス ID",
+        "debug": "デバッグ"
+      },
+      "outputs": {
+        "audios": "オーディオ一覧",
+        "stem_names": "ステム名一覧"
+      }
+    },
+    "custom_mss_separate_list": {
+      "title": "カスタム MSS 分離リスト",
+      "inputs": {
+        "audio": "オーディオ",
+        "params": "パラメータ"
+      },
+      "widgets": {
+        "model_name": "モデル名",
+        "model_type": "モデルタイプ",
+        "device": "デバイス",
+        "device_ids": "デバイス ID",
+        "debug": "デバッグ"
+      },
+      "outputs": {
+        "audios": "オーディオ一覧",
+        "stem_names": "ステム名一覧"
+      }
+    },
+    "vr_separate_list": {
+      "title": "VR 分離リスト",
+      "inputs": {
+        "audio": "オーディオ",
+        "params": "パラメータ"
+      },
+      "widgets": {
+        "model_name": "モデル名",
+        "device": "デバイス",
+        "download_missing": "不足モデルを自動ダウンロード",
+        "source": "ダウンロード元",
+        "device_ids": "デバイス ID",
+        "debug": "デバッグ"
+      },
+      "outputs": {
+        "audios": "オーディオ一覧",
+        "stem_names": "ステム名一覧"
+      }
     }
   }
 }

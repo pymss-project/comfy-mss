@@ -8,6 +8,7 @@ import {
   FIXED_260_NODE_TYPES,
   LOAD_AUDIO_NODE_TYPE,
   SAVE_AUDIO_NODE_TYPE,
+  SEPARATE_LIST_NODE_TYPES,
   SEPARATE_NODE_TYPES,
 } from "./comfy_mss/constants.js";
 import { registerAudioToolNode } from "./comfy_mss/audio_tools.js";
@@ -32,6 +33,7 @@ function applyColorSetup() {
 
 const COMFY_MSS_NODE_TYPES = new Set([
   ...SEPARATE_NODE_TYPES,
+  ...SEPARATE_LIST_NODE_TYPES,
   ...AUDIO_TOOL_NODE_TYPES,
   ...FIXED_260_NODE_TYPES,
   LOAD_AUDIO_NODE_TYPE,
@@ -128,7 +130,7 @@ app.registerExtension({
       return;
     }
 
-    if (SEPARATE_NODE_TYPES.has(nodeData.name)) {
+    if (SEPARATE_NODE_TYPES.has(nodeData.name) || SEPARATE_LIST_NODE_TYPES.has(nodeData.name)) {
       registerSeparateNode(nodeType, wrapOnNodeCreated, api);
       return;
     }

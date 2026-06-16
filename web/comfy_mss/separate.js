@@ -1,6 +1,7 @@
-import { MSS_MAX_STEMS, SEPARATE_MIN_NODE_WIDTH, TYPE_COLORS, VR_MAX_STEMS } from "./constants.js";
+import { FIXED_260_NODE_TYPES, MSS_MAX_STEMS, SEPARATE_MIN_NODE_WIDTH, STANDARD_NODE_WIDTH, TYPE_COLORS, VR_MAX_STEMS } from "./constants.js";
 import { colorNodeSlots, typeColor } from "./colors.js";
 import { currentLanguage, localizedModelDisplayName, t, translateNodeLabels } from "./i18n.js";
+import { setNodeWidth } from "./sizing.js";
 import { disconnectOutput, getWidget } from "./utils.js";
 
 const catalogByKind = new Map();
@@ -48,10 +49,30 @@ function rebuildNotDownloadedDisplayNames() {
 }
 
 function modelKind(node) {
-  if (node.comfyClass === "custom_mss_separate" || node.type === "custom_mss_separate") {
+  if (
+    node.comfyClass === "custom_mss_separate" ||
+    node.type === "custom_mss_separate" ||
+    node.comfyClass === "custom_mss_separate_list" ||
+    node.type === "custom_mss_separate_list"
+  ) {
     return "custom";
   }
-  return node.comfyClass === "vr_separate" || node.type === "vr_separate" ? "vr" : "mss";
+  return (
+    node.comfyClass === "vr_separate" ||
+    node.type === "vr_separate" ||
+    node.comfyClass === "vr_separate_list" ||
+    node.type === "vr_separate_list"
+  )
+    ? "vr"
+    : "mss";
+}
+
+function isListNode(node) {
+  return String(node.comfyClass ?? node.type ?? "").endsWith("_list");
+}
+
+function shouldUseFixedWidth(node) {
+  return FIXED_260_NODE_TYPES.has(String(node.comfyClass ?? node.type ?? ""));
 }
 
 function maxStems(node) {
@@ -209,6 +230,9 @@ function syncOutputs(node, stems) {
 }
 
 async function refreshNodeOutputs(node, api) {
+  if (isListNode(node)) {
+    return;
+  }
   try {
     syncOutputs(node, await stemsForNode(node, api));
   } catch (error) {
@@ -272,6 +296,9 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
     refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
     scheduleRefreshNodeOutputs(this, api);
     syncLanguage(this, api);
+    if (shouldUseFixedWidth(this)) {
+      setNodeWidth(this, STANDARD_NODE_WIDTH);
+    }
   });
 
   const onConfigure = nodeType.prototype.onConfigure;
@@ -282,6 +309,9 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
       addRefreshModelsButton(this, api);
       refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
       syncLanguage(this, api);
+      if (shouldUseFixedWidth(this)) {
+        setNodeWidth(this, STANDARD_NODE_WIDTH);
+      }
     }, 0);
     scheduleRefreshNodeOutputs(this, api);
     return result;

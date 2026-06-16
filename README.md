@@ -8,8 +8,11 @@
 ## Nodes
 
 - `MSS Separate`: separates a ComfyUI `AUDIO` stream with catalog MSS/non-VR pymss models.
+- `MSS Separate List`: list-output variant of `MSS Separate`.
 - `Custom MSS Separate`: separates audio with user-provided MSS models from the custom model folder.
+- `Custom MSS Separate List`: list-output variant of `Custom MSS Separate`.
 - `VR Separate`: separates a ComfyUI `AUDIO` stream with VR/UVR pymss models.
+- `VR Separate List`: list-output variant of `VR Separate`.
 - `MSS Params`: optional parameter input for `MSS Separate` and `Custom MSS Separate`.
 - `VR Params`: optional parameter input for `VR Separate`.
 - `Load Audio`: loads one audio file and outputs both the audio stream and the file name without extension.
@@ -83,6 +86,11 @@ If multiple `pymss` model folders are registered, comfy-mss scans them when chec
 - `device_ids`: defaults to `0`.
 - `debug`: prints pymss debug and timing information when enabled.
 
+The list variants, `MSS Separate List` and `VR Separate List`, use the same inputs and model menu behavior as their matching separate nodes. Instead of creating one audio/text output pair per stem, they return two list outputs:
+
+- `audios`: separated stem audio list.
+- `stem_names`: matching stem name list.
+
 ### Custom MSS Separate
 
 `Custom MSS Separate` scans the custom model folder, which defaults to: `ComfyUI/models/pymss/custom`. The folder is created automatically. Custom model files must be paired with a same-name YAML config in the same folder, for example:
@@ -112,6 +120,8 @@ training:
 - `debug`: prints pymss debug and timing information when enabled.
 
 Click `Refresh Models` after adding, removing, or changing custom model files. If no valid custom model pair exists, the node hides unused stem outputs.
+
+`Custom MSS Separate List` uses the same inputs and model menu behavior as `Custom MSS Separate`, but returns `audios` and `stem_names` as list outputs.
 
 ## Params Nodes
 
