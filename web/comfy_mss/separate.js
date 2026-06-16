@@ -1,6 +1,7 @@
-import { MSS_MAX_STEMS, SEPARATE_MIN_NODE_WIDTH, TYPE_COLORS, VR_MAX_STEMS } from "./constants.js";
+import { MSS_MAX_STEMS, SEPARATE_MIN_NODE_WIDTH, STANDARD_NODE_WIDTH, TYPE_COLORS, VR_MAX_STEMS } from "./constants.js";
 import { colorNodeSlots, typeColor } from "./colors.js";
 import { currentLanguage, localizedModelDisplayName, t, translateNodeLabels } from "./i18n.js";
+import { setNodeWidth } from "./sizing.js";
 import { disconnectOutput, getWidget } from "./utils.js";
 
 const catalogByKind = new Map();
@@ -291,6 +292,9 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
     refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
     scheduleRefreshNodeOutputs(this, api);
     syncLanguage(this, api);
+    if (isListNode(this)) {
+      setNodeWidth(this, STANDARD_NODE_WIDTH);
+    }
   });
 
   const onConfigure = nodeType.prototype.onConfigure;
@@ -301,6 +305,9 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
       addRefreshModelsButton(this, api);
       refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
       syncLanguage(this, api);
+      if (isListNode(this)) {
+        setNodeWidth(this, STANDARD_NODE_WIDTH);
+      }
     }, 0);
     scheduleRefreshNodeOutputs(this, api);
     return result;
