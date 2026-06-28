@@ -1,7 +1,7 @@
-import { FIXED_260_NODE_TYPES, MSS_MAX_STEMS, SEPARATE_MIN_NODE_WIDTH, STANDARD_NODE_WIDTH, TYPE_COLORS, VR_MAX_STEMS } from "./constants.js";
+import { FIXED_420_NODE_WIDTH, MSS_MAX_STEMS, TYPE_COLORS, VR_MAX_STEMS } from "./constants.js";
 import { colorNodeSlots, typeColor } from "./colors.js";
 import { currentLanguage, localizedModelDisplayName, t, translateNodeLabels } from "./i18n.js";
-import { setNodeWidth } from "./sizing.js";
+import { resizeNodeKeepingWidth } from "./sizing.js";
 import { disconnectOutput, getWidget } from "./utils.js";
 
 const catalogByKind = new Map();
@@ -69,10 +69,6 @@ function modelKind(node) {
 
 function isListNode(node) {
   return String(node.comfyClass ?? node.type ?? "").endsWith("_list");
-}
-
-function shouldUseFixedWidth(node) {
-  return FIXED_260_NODE_TYPES.has(String(node.comfyClass ?? node.type ?? ""));
 }
 
 function maxStems(node) {
@@ -221,8 +217,7 @@ function syncOutputs(node, stems) {
   }
 
   translateNodeLabels(node);
-  node.setSize(node.computeSize());
-  node.size[0] = Math.max(node.size[0], SEPARATE_MIN_NODE_WIDTH);
+  resizeNodeKeepingWidth(node, FIXED_420_NODE_WIDTH);
   colorNodeSlots(node);
   node.arrange?.();
   node.graph?.setDirtyCanvas?.(true, true);
@@ -296,9 +291,6 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
     refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
     scheduleRefreshNodeOutputs(this, api);
     syncLanguage(this, api);
-    if (shouldUseFixedWidth(this)) {
-      setNodeWidth(this, STANDARD_NODE_WIDTH);
-    }
   });
 
   const onConfigure = nodeType.prototype.onConfigure;
@@ -309,9 +301,6 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
       addRefreshModelsButton(this, api);
       refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
       syncLanguage(this, api);
-      if (shouldUseFixedWidth(this)) {
-        setNodeWidth(this, STANDARD_NODE_WIDTH);
-      }
     }, 0);
     scheduleRefreshNodeOutputs(this, api);
     return result;

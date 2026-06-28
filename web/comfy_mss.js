@@ -4,19 +4,21 @@ import { api } from "../../scripts/api.js";
 import { applyLinkColorPatch, applyTypeColors, colorLink, colorNodeSlots, colorSlot } from "./comfy_mss/colors.js";
 import {
   AUDIO_ENSEMBLE_NODE_TYPE,
-  AUDIO_TOOL_NODE_TYPES,
+  FIXED_200_NODE_TYPES,
+  FIXED_200_NODE_WIDTH,
+  FIXED_420_NODE_TYPES,
+  FIXED_420_NODE_WIDTH,
   FIXED_260_NODE_TYPES,
   LOAD_AUDIO_NODE_TYPE,
   SAVE_AUDIO_NODE_TYPE,
   SEPARATE_LIST_NODE_TYPES,
   SEPARATE_NODE_TYPES,
 } from "./comfy_mss/constants.js";
-import { registerAudioToolNode } from "./comfy_mss/audio_tools.js";
 import { registerAudioEnsembleNode } from "./comfy_mss/ensemble.js";
 import { registerLoadAudioNode } from "./comfy_mss/load_audio.js";
 import { registerSaveAudioNode } from "./comfy_mss/save_audio.js";
 import { registerSeparateNode } from "./comfy_mss/separate.js";
-import { registerFixedWidthNode } from "./comfy_mss/sizing.js";
+import { registerFixedWidthNode, registerFixedWidthOnlyNode } from "./comfy_mss/sizing.js";
 import {
   currentLanguage,
   loadTranslations,
@@ -34,8 +36,9 @@ function applyColorSetup() {
 const COMFY_MSS_NODE_TYPES = new Set([
   ...SEPARATE_NODE_TYPES,
   ...SEPARATE_LIST_NODE_TYPES,
-  ...AUDIO_TOOL_NODE_TYPES,
+  ...FIXED_200_NODE_TYPES,
   ...FIXED_260_NODE_TYPES,
+  ...FIXED_420_NODE_TYPES,
   LOAD_AUDIO_NODE_TYPE,
   AUDIO_ENSEMBLE_NODE_TYPE,
   SAVE_AUDIO_NODE_TYPE,
@@ -82,10 +85,10 @@ app.registerExtension({
     applyColorSetup();
     loadTranslations(api);
 
-    const originalOnNodeCreated = nodeType.prototype.onNodeCreated;
     function wrapOnNodeCreated(extra) {
+      const previousOnNodeCreated = nodeType.prototype.onNodeCreated;
       nodeType.prototype.onNodeCreated = function () {
-        const result = originalOnNodeCreated?.apply(this, arguments);
+        const result = previousOnNodeCreated?.apply(this, arguments);
         colorNodeSlots(this);
         extra?.call(this);
         refreshNodeLanguage(this, nodeData.name);
@@ -132,11 +135,9 @@ app.registerExtension({
 
     if (SEPARATE_NODE_TYPES.has(nodeData.name) || SEPARATE_LIST_NODE_TYPES.has(nodeData.name)) {
       registerSeparateNode(nodeType, wrapOnNodeCreated, api);
-      return;
-    }
-
-    if (AUDIO_TOOL_NODE_TYPES.has(nodeData.name)) {
-      registerAudioToolNode(wrapOnNodeCreated);
+      if (FIXED_420_NODE_TYPES.has(nodeData.name)) {
+        registerFixedWidthOnlyNode(wrapOnNodeCreated, FIXED_420_NODE_WIDTH);
+      }
       return;
     }
 
@@ -147,6 +148,16 @@ app.registerExtension({
 
     if (FIXED_260_NODE_TYPES.has(nodeData.name)) {
       registerFixedWidthNode(wrapOnNodeCreated);
+      return;
+    }
+
+    if (FIXED_200_NODE_TYPES.has(nodeData.name)) {
+      registerFixedWidthNode(wrapOnNodeCreated, FIXED_200_NODE_WIDTH);
+      return;
+    }
+
+    if (FIXED_420_NODE_TYPES.has(nodeData.name)) {
+      registerFixedWidthOnlyNode(wrapOnNodeCreated, FIXED_420_NODE_WIDTH);
       return;
     }
 

@@ -1,4 +1,4 @@
-import { AUDIO_ENSEMBLE_MIN_NODE_WIDTH, TYPE_COLORS } from "./constants.js";
+import { TYPE_COLORS } from "./constants.js";
 import { colorSlot } from "./colors.js";
 import { disconnectInput, getWidget } from "./utils.js";
 import { setNodeWidth } from "./sizing.js";
@@ -53,7 +53,7 @@ function syncAudioEnsembleInputs(node) {
       widget.hidden = Number.parseInt(weightMatch[1], 10) > count;
     }
   }
-  setNodeWidth(node, AUDIO_ENSEMBLE_MIN_NODE_WIDTH);
+  setNodeWidth(node);
 }
 
 function scheduleSyncAudioEnsembleInputs(node) {

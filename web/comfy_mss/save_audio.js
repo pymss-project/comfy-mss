@@ -1,5 +1,4 @@
 import { getWidget } from "./utils.js";
-import { SAVE_AUDIO_MIN_NODE_WIDTH } from "./constants.js";
 import { setNodeWidth } from "./sizing.js";
 
 const FORMAT_WIDGETS = {
@@ -18,7 +17,7 @@ function syncSaveAudioWidgets(node) {
     }
   }
 
-  setNodeWidth(node, SAVE_AUDIO_MIN_NODE_WIDTH);
+  setNodeWidth(node);
 }
 
 function scheduleSyncSaveAudioWidgets(node) {
