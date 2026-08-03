@@ -58,18 +58,10 @@ You can also configure an extra ComfyUI model path by copying `extra_model_paths
 
 ```yaml
 comfy-mss:
-  base_path: path/to/your/model/root/
-  pymss: models
+  pymss: E:/AI/Pymss-Studio/models
 ```
 
-The outer `comfy-mss` is only the config group name. The inner `pymss` is the actual ComfyUI model folder key used by comfy-mss. With the example above, the final model folder is `path/to/your/model/root/models`.
-
-You can also use an absolute path directly:
-
-```yaml
-comfy-mss:
-  pymss: E:/AI/Models/pymss
-```
+The outer `comfy-mss` is only the config group name. The inner `pymss` is the actual ComfyUI model folder key used by comfy-mss. Custom models are always stored in the `custom` directory below each registered `pymss` model folder.
 
 If multiple `pymss` model folders are registered, comfy-mss scans them when checking whether catalog models are already downloaded. Downloads use the default `pymss` folder.
 
@@ -81,7 +73,7 @@ If multiple `pymss` model folders are registered, comfy-mss scans them when chec
 - `model_name`: pymss catalog model name.
 - `device`: `auto`, `cpu`, `cuda`, `mps`, or `mlx`.
 - `download_missing`: defaults to `true`.
-- `source`: `modelscope`, `huggingface`, or `hf-mirror`.
+- `source`: `modelscope`, `huggingface`, or `hf-mirror`, select `huggingface` if you have access to HuggingFace.
 - `params`: optional params node output.
 - `device_ids`: defaults to `0`.
 - `debug`: prints pymss debug and timing information when enabled.
@@ -93,11 +85,13 @@ The list variants, `MSS Separate List` and `VR Separate List`, use the same inpu
 
 ### Custom MSS Separate
 
-`Custom MSS Separate` scans the custom model folder, which defaults to: `ComfyUI/models/pymss/custom`. The folder is created automatically. Custom model files must be paired with a same-name YAML config in the same folder, for example:
+`Custom MSS Separate` supports MSST models only; VR/UVR models are not supported by this custom-model workflow. It scans the `custom` folder located under the pymss model root: `<pymss_model_dir>/custom` (for example, `E:/AI/Pymss-Studio/models/custom` when `pymss` is `E:/AI/Pymss-Studio/models`). Each custom model needs its own direct child folder. The node displays that folder's name, and only lists folders containing both a supported model file and a YAML config file, for example:
 
 ```text
-my_model.ckpt
-my_model.yaml
+custom/
+  my_model_name/
+    weights_name.ckpt
+    config_name.yaml
 ```
 
 Config files must use `.yaml`. The node reads `training.instruments` from the YAML to determine dynamic stem outputs:
@@ -113,7 +107,7 @@ training:
 
 - `audio`: ComfyUI `AUDIO`.
 - `model_name`: detected custom model pair.
-- `model_type`: pymss architecture type, such as `mel_band_roformer`, `bs_roformer`, `mdx23c`, or `htdemucs`.
+- `model_type`: pymss architecture type, such as `mel_band_roformer`, `bs_roformer`, `mdx23c`, or `htdemucs`. VR/UVR is not supported.
 - `device`: `auto`, `cpu`, `cuda`, `mps`, or `mlx`.
 - `params`: optional `MSS Params` output.
 - `device_ids`: defaults to `0`.

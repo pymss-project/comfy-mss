@@ -7,7 +7,7 @@ from functools import lru_cache
 from pymss.modules.vocal_remover.vr_models import VR_MODEL_METADATA
 
 from ..paths import registered_model_dirs
-from ..constants import NOT_DOWNLOADED_PREFIX, CUSTOM_MODEL_EXTENSIONS, CUSTOM_MODEL_DIR_NAME
+from ..constants import NOT_DOWNLOADED_PREFIX, CUSTOM_MODEL_DIR_NAME, CUSTOM_MODEL_EXTENSIONS
 
 
 def clean_model_display_name(model_name):
@@ -75,7 +75,9 @@ def split_stems(value):
 
 
 def entry_stems(entry):
-    stems = split_stems(entry.config_instruments)
+    # ``config_instruments`` is only available in newer pymss releases.
+    # Catalog loading must remain compatible with older ModelEntry objects.
+    stems = split_stems(getattr(entry, "config_instruments", None))
     if stems:
         return stems
 
@@ -84,7 +86,7 @@ def entry_stems(entry):
         if data:
             return [data["primary_stem"], data["secondary_stem"]]
 
-    stems = split_stems(entry.target_stem)
+    stems = split_stems(getattr(entry, "target_stem", None))
     return stems or ["audio"]
 
 
@@ -124,37 +126,67 @@ def custom_model_catalog():
     rows = []
     seen = set()
     for root in custom_model_dirs():
-        for current_root, _dirs, files in os.walk(root):
-            file_set = set(files)
-            for filename in files:
-                stem, ext = os.path.splitext(filename)
-                if ext.lower() not in CUSTOM_MODEL_EXTENSIONS:
-                    continue
-                config_name = f"{stem}.yaml"
-                if config_name not in file_set:
-                    continue
-                model_path = os.path.join(current_root, filename)
-                config_path = os.path.join(current_root, config_name)
-                relpath = os.path.relpath(model_path, root).replace("\\", "/")
-                key = relpath.lower()
-                if key in seen:
-                    continue
-                seen.add(key)
-                try:
-                    config = _load_yaml(config_path)
-                except Exception:
-                    continue
-                rows.append(
-                    {
-                        "name": relpath,
-                        "display_name": relpath,
-                        "downloaded": True,
-                        "model_type": custom_entry_model_type(config),
-                        "model_path": model_path,
-                        "config_path": config_path,
-                        "stems": custom_entry_stems(config),
-                    }
+        try:
+            model_dirs = sorted(
+                (entry for entry in os.scandir(root) if entry.is_dir()),
+                key=lambda entry: entry.name.lower(),
+            )
+        except OSError:
+            continue
+
+        for model_dir in model_dirs:
+            try:
+                files = sorted(
+                    (entry for entry in os.scandir(model_dir.path) if entry.is_file()),
+                    key=lambda entry: entry.name.lower(),
                 )
+            except OSError:
+                continue
+
+            model_files = [entry for entry in files if os.path.splitext(entry.name)[1].lower() in CUSTOM_MODEL_EXTENSIONS]
+            config_files = [entry for entry in files if os.path.splitext(entry.name)[1].lower() == ".yaml"]
+            if not model_files or not config_files:
+                continue
+
+            # A folder represents one custom model. Prefer a same-stem pair if
+            # present for backwards-friendly determinism; otherwise the first
+            # model and YAML in alphabetical order form the folder's pair.
+            model_file = model_files[0]
+            config_file = config_files[0]
+            configs_by_stem = {os.path.splitext(entry.name)[0].lower(): entry for entry in config_files}
+            for candidate in model_files:
+                matching_config = configs_by_stem.get(os.path.splitext(candidate.name)[0].lower())
+                if matching_config:
+                    model_file = candidate
+                    config_file = matching_config
+                    break
+
+            name = model_dir.name
+            key = name.lower()
+            if key in seen:
+                continue
+            try:
+                config = _load_yaml(config_file.path)
+            except Exception:
+                continue
+            model_type = custom_entry_model_type(config)
+            # Custom MSS nodes only instantiate MSST architectures. VR/UVR
+            # models belong to the dedicated VR nodes and must not appear in
+            # this custom-model menu even when accompanied by a YAML file.
+            if model_type.strip().lower() == "vr":
+                continue
+            seen.add(key)
+            rows.append(
+                {
+                    "name": name,
+                    "display_name": name,
+                    "downloaded": True,
+                    "model_type": model_type,
+                    "model_path": model_file.path,
+                    "config_path": config_file.path,
+                    "stems": custom_entry_stems(config),
+                }
+            )
     rows.sort(key=lambda item: item["name"].lower())
     return rows
 
