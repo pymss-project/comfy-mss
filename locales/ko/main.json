@@ -160,7 +160,6 @@
       },
       "widgets": {
         "output_format": "출력 형식",
-        "output_folder": "출력 폴더",
         "sample_rate": "샘플레이트",
         "wav_bit_depth": "WAV 비트 깊이",
         "flac_bit_depth": "FLAC 비트 깊이",

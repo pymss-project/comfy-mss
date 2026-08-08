@@ -160,7 +160,6 @@
       },
       "widgets": {
         "output_format": "出力形式",
-        "output_folder": "出力フォルダ",
         "sample_rate": "サンプルレート",
         "wav_bit_depth": "WAV ビット深度",
         "flac_bit_depth": "FLAC ビット深度",

@@ -160,7 +160,6 @@
       },
       "widgets": {
         "output_format": "output_format",
-        "output_folder": "output_folder",
         "sample_rate": "sample_rate",
         "wav_bit_depth": "wav_bit_depth",
         "flac_bit_depth": "flac_bit_depth",

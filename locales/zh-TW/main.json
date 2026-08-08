@@ -160,7 +160,6 @@
       },
       "widgets": {
         "output_format": "輸出格式",
-        "output_folder": "輸出資料夾",
         "sample_rate": "取樣率",
         "wav_bit_depth": "WAV 位元深度",
         "flac_bit_depth": "FLAC 位元深度",

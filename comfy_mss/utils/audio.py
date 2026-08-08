@@ -148,14 +148,8 @@ def load_audio_paths(paths, sample_rate, mono, sort_files, limit):
     return audios, [audio_name_from_path(path) for path in unique_paths]
 
 
-def resolve_save_dir(output_folder):
-    output_folder = str(output_folder or "").strip()
-    if not output_folder or output_folder.lower() == "default":
-        save_dir = folder_paths.get_output_directory()
-    elif os.path.isabs(output_folder):
-        save_dir = output_folder
-    else:
-        save_dir = os.path.join(folder_paths.get_output_directory(), output_folder)
+def resolve_save_dir():
+    save_dir = folder_paths.get_output_directory()
     save_dir = os.path.abspath(os.path.expanduser(os.path.expandvars(save_dir)))
     os.makedirs(save_dir, exist_ok=True)
     return save_dir
@@ -230,7 +224,6 @@ def resample_audio_batch(waveform, source_sample_rate, target_sample_rate):
 
 def save_comfy_audio(
     audio,
-    output_folder,
     output_format,
     target_sample_rate,
     wav_bit_depth,
@@ -240,7 +233,7 @@ def save_comfy_audio(
 ):
     waveform, sample_rate = audio_batch_to_numpy(audio)
     waveform, sample_rate = resample_audio_batch(waveform, sample_rate, target_sample_rate)
-    save_dir = resolve_save_dir(output_folder)
+    save_dir = resolve_save_dir()
     output_format = output_format.lower()
     audio_params = {
         "wav_bit_depth": wav_bit_depth,

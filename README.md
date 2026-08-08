@@ -191,15 +191,12 @@ Inputs:
 
 - `audio`: ComfyUI `AUDIO`.
 - `output_format`: `wav`, `flac`, or `mp3`.
-- `output_folder`: defaults to `Default`, which saves into ComfyUI's output directory.
 - `sample_rate`: `32000`, `44100`, or `48000`; defaults to `44100`.
 - `filename`: optional forced text input. Connect a composed file name such as `audio_name + "_" + stem_name`.
 
 Save behavior:
 
-- `output_folder` set to `Default` or left empty: save into ComfyUI's default output folder.
-- Relative `output_folder`: create/use that folder inside ComfyUI's output folder.
-- Absolute `output_folder`: use that folder directly.
+- Files are always saved in ComfyUI's default output folder.
 - If `filename` is not connected or is empty, saved files fall back to `audio_YYYYMMDD_HHMMSS`.
 - Existing files are not overwritten. If a target path already exists, comfy-mss appends a numeric suffix.
 
