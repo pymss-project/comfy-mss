@@ -24,12 +24,12 @@ register_routes()
 
 
 NODE_CLASS_MAPPINGS = {
-    "mss_separate": PymssMssSeparate,
-    "mss_separate_list": PymssMssSeparateList,
-    "custom_mss_separate": PymssCustomMssSeparate,
-    "custom_mss_separate_list": PymssCustomMssSeparateList,
-    "vr_separate": PymssVrSeparate,
-    "vr_separate_list": PymssVrSeparateList,
+    "pymss_mss_separate": PymssMssSeparate,
+    "pymss_mss_separate_list": PymssMssSeparateList,
+    "pymss_custom_mss_separate": PymssCustomMssSeparate,
+    "pymss_custom_mss_separate_list": PymssCustomMssSeparateList,
+    "pymss_vr_separate": PymssVrSeparate,
+    "pymss_vr_separate_list": PymssVrSeparateList,
     "pymss_mss_params": PymssMssParams,
     "pymss_vr_params": PymssVrParams,
     "pymss_load_audio": PymssLoadAudio,
@@ -41,12 +41,12 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "mss_separate": "MSS Separate",
-    "mss_separate_list": "MSS Separate List",
-    "custom_mss_separate": "Custom MSS Separate",
-    "custom_mss_separate_list": "Custom MSS Separate List",
-    "vr_separate": "VR Separate",
-    "vr_separate_list": "VR Separate List",
+    "pymss_mss_separate": "MSS Separate",
+    "pymss_mss_separate_list": "MSS Separate List",
+    "pymss_custom_mss_separate": "Custom MSS Separate",
+    "pymss_custom_mss_separate_list": "Custom MSS Separate List",
+    "pymss_vr_separate": "VR Separate",
+    "pymss_vr_separate_list": "VR Separate List",
     "pymss_mss_params": "MSS Params",
     "pymss_vr_params": "VR Params",
     "pymss_load_audio": "Load Audio",

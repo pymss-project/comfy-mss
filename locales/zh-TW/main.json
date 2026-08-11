@@ -1,6 +1,6 @@
 {
   "nodeDefs": {
-    "mss_separate": {
+    "pymss_mss_separate": {
       "title": "MSS 分離",
       "inputs": {
         "audio": "音訊",
@@ -15,7 +15,7 @@
         "debug": "偵錯"
       }
     },
-    "custom_mss_separate": {
+    "pymss_custom_mss_separate": {
       "title": "自訂 MSS 分離",
       "inputs": {
         "audio": "音訊",
@@ -29,7 +29,7 @@
         "debug": "偵錯"
       }
     },
-    "vr_separate": {
+    "pymss_vr_separate": {
       "title": "VR 分離",
       "inputs": {
         "audio": "音訊",
@@ -166,7 +166,7 @@
         "mp3_bit_rate": "MP3 位元率"
       }
     },
-    "mss_separate_list": {
+    "pymss_mss_separate_list": {
       "title": "MSS 分離列表",
       "inputs": {
         "audio": "音訊",
@@ -185,7 +185,7 @@
         "stem_names": "音軌名稱列表"
       }
     },
-    "custom_mss_separate_list": {
+    "pymss_custom_mss_separate_list": {
       "title": "自訂 MSS 分離列表",
       "inputs": {
         "audio": "音訊",
@@ -203,7 +203,7 @@
         "stem_names": "音軌名稱列表"
       }
     },
-    "vr_separate_list": {
+    "pymss_vr_separate_list": {
       "title": "VR 分離列表",
       "inputs": {
         "audio": "音訊",

@@ -1,6 +1,6 @@
 {
   "nodeDefs": {
-    "mss_separate": {
+    "pymss_mss_separate": {
       "title": "MSS 分離",
       "inputs": {
         "audio": "音声",
@@ -15,7 +15,7 @@
         "debug": "デバッグ"
       }
     },
-    "custom_mss_separate": {
+    "pymss_custom_mss_separate": {
       "title": "カスタム MSS 分離",
       "inputs": {
         "audio": "音声",
@@ -29,7 +29,7 @@
         "debug": "デバッグ"
       }
     },
-    "vr_separate": {
+    "pymss_vr_separate": {
       "title": "VR 分離",
       "inputs": {
         "audio": "音声",
@@ -166,7 +166,7 @@
         "mp3_bit_rate": "MP3 ビットレート"
       }
     },
-    "mss_separate_list": {
+    "pymss_mss_separate_list": {
       "title": "MSS 分離リスト",
       "inputs": {
         "audio": "オーディオ",
@@ -185,7 +185,7 @@
         "stem_names": "ステム名一覧"
       }
     },
-    "custom_mss_separate_list": {
+    "pymss_custom_mss_separate_list": {
       "title": "カスタム MSS 分離リスト",
       "inputs": {
         "audio": "オーディオ",
@@ -203,7 +203,7 @@
         "stem_names": "ステム名一覧"
       }
     },
-    "vr_separate_list": {
+    "pymss_vr_separate_list": {
       "title": "VR 分離リスト",
       "inputs": {
         "audio": "オーディオ",

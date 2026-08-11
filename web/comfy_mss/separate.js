@@ -50,18 +50,18 @@ function rebuildNotDownloadedDisplayNames() {
 
 function modelKind(node) {
   if (
-    node.comfyClass === "custom_mss_separate" ||
-    node.type === "custom_mss_separate" ||
-    node.comfyClass === "custom_mss_separate_list" ||
-    node.type === "custom_mss_separate_list"
+    node.comfyClass === "pymss_custom_mss_separate" ||
+    node.type === "pymss_custom_mss_separate" ||
+    node.comfyClass === "pymss_custom_mss_separate_list" ||
+    node.type === "pymss_custom_mss_separate_list"
   ) {
     return "custom";
   }
   return (
-    node.comfyClass === "vr_separate" ||
-    node.type === "vr_separate" ||
-    node.comfyClass === "vr_separate_list" ||
-    node.type === "vr_separate_list"
+    node.comfyClass === "pymss_vr_separate" ||
+    node.type === "pymss_vr_separate" ||
+    node.comfyClass === "pymss_vr_separate_list" ||
+    node.type === "pymss_vr_separate_list"
   )
     ? "vr"
     : "mss";

@@ -1,8 +1,8 @@
-export const SEPARATE_NODE_TYPES = new Set(["mss_separate", "custom_mss_separate", "vr_separate"]);
+export const SEPARATE_NODE_TYPES = new Set(["pymss_mss_separate", "pymss_custom_mss_separate", "pymss_vr_separate"]);
 export const SEPARATE_LIST_NODE_TYPES = new Set([
-  "mss_separate_list",
-  "custom_mss_separate_list",
-  "vr_separate_list",
+  "pymss_mss_separate_list",
+  "pymss_custom_mss_separate_list",
+  "pymss_vr_separate_list",
 ]);
 export const LOAD_AUDIO_NODE_TYPE = "pymss_load_audio";
 export const AUDIO_ENSEMBLE_NODE_TYPE = "pymss_audio_ensemble";
@@ -14,12 +14,12 @@ export const FIXED_260_NODE_TYPES = new Set([
   "pymss_load_audio_batch",
 ]);
 export const FIXED_420_NODE_TYPES = new Set([
-  "mss_separate",
-  "custom_mss_separate",
-  "vr_separate",
-  "mss_separate_list",
-  "custom_mss_separate_list",
-  "vr_separate_list",
+  "pymss_mss_separate",
+  "pymss_custom_mss_separate",
+  "pymss_vr_separate",
+  "pymss_mss_separate_list",
+  "pymss_custom_mss_separate_list",
+  "pymss_vr_separate_list",
 ]);
 
 export const MSS_MAX_STEMS = 8;

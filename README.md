@@ -22,6 +22,9 @@
 - `Audio Ensemble`: combines 2 to 10 audio inputs with selectable ensemble algorithms and weights.
 - `Save Audio`: saves ComfyUI `AUDIO` streams as `wav`, `flac`, or `mp3`.
 
+> [!IMPORTANT]
+> Workflows created in v1.0.x are not backward-compatible with v1.1.0+ workflows due to node type renaming.
+
 ## Installation
 
 Clone or download this repository, put it into your ComfyUI `custom_nodes` folder. The custom nodes load automatically when you start ComfyUI. Make sure to install `pymss` in the same Python environment as ComfyUI. Or you can use `comfyui_manager` to install this custom node.

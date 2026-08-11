@@ -1,6 +1,6 @@
 {
   "nodeDefs": {
-    "mss_separate": {
+    "pymss_mss_separate": {
       "title": "MSS 분리",
       "inputs": {
         "audio": "오디오",
@@ -15,7 +15,7 @@
         "debug": "디버그"
       }
     },
-    "custom_mss_separate": {
+    "pymss_custom_mss_separate": {
       "title": "커스텀 MSS 분리",
       "inputs": {
         "audio": "오디오",
@@ -29,7 +29,7 @@
         "debug": "디버그"
       }
     },
-    "vr_separate": {
+    "pymss_vr_separate": {
       "title": "VR 분리",
       "inputs": {
         "audio": "오디오",
@@ -166,7 +166,7 @@
         "mp3_bit_rate": "MP3 비트레이트"
       }
     },
-    "mss_separate_list": {
+    "pymss_mss_separate_list": {
       "title": "MSS 분리 목록",
       "inputs": {
         "audio": "오디오",
@@ -185,7 +185,7 @@
         "stem_names": "스템 이름 목록"
       }
     },
-    "custom_mss_separate_list": {
+    "pymss_custom_mss_separate_list": {
       "title": "사용자 MSS 분리 목록",
       "inputs": {
         "audio": "오디오",
@@ -203,7 +203,7 @@
         "stem_names": "스템 이름 목록"
       }
     },
-    "vr_separate_list": {
+    "pymss_vr_separate_list": {
       "title": "VR 분리 목록",
       "inputs": {
         "audio": "오디오",

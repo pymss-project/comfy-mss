@@ -1,6 +1,6 @@
 {
   "nodeDefs": {
-    "mss_separate": {
+    "pymss_mss_separate": {
       "title": "MSS Separate",
       "inputs": {
         "audio": "audio",
@@ -15,7 +15,7 @@
         "debug": "debug"
       }
     },
-    "custom_mss_separate": {
+    "pymss_custom_mss_separate": {
       "title": "Custom MSS Separate",
       "inputs": {
         "audio": "audio",
@@ -29,7 +29,7 @@
         "debug": "debug"
       }
     },
-    "vr_separate": {
+    "pymss_vr_separate": {
       "title": "VR Separate",
       "inputs": {
         "audio": "audio",
@@ -166,7 +166,7 @@
         "mp3_bit_rate": "mp3_bit_rate"
       }
     },
-    "mss_separate_list": {
+    "pymss_mss_separate_list": {
       "title": "MSS Separate List",
       "inputs": {
         "audio": "audio",
@@ -185,7 +185,7 @@
         "stem_names": "stem_names"
       }
     },
-    "custom_mss_separate_list": {
+    "pymss_custom_mss_separate_list": {
       "title": "Custom MSS Separate List",
       "inputs": {
         "audio": "audio",
@@ -203,7 +203,7 @@
         "stem_names": "stem_names"
       }
     },
-    "vr_separate_list": {
+    "pymss_vr_separate_list": {
       "title": "VR Separate List",
       "inputs": {
         "audio": "audio",
