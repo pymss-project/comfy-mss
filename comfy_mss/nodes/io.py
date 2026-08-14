@@ -16,7 +16,14 @@ class PymssLoadAudio:
         return {
             "required": {
                 "audio": (sorted(files),),
-            }
+            },
+            "optional": {
+                # Metadata for downstream hosts (pymss DAG / pymss-studio): when the
+                # audio file is absent at run time, the runtime input mapped to this
+                # name feeds the node. Unused inside ComfyUI itself, where the audio
+                # combo is always resolved locally.
+                "input_name": ("STRING", {"default": "", "multiline": False}),
+            },
         }
 
     RETURN_TYPES = ("AUDIO", "STRING")
@@ -24,7 +31,7 @@ class PymssLoadAudio:
     FUNCTION = "load"
     CATEGORY = CATEGORY
 
-    def load(self, audio):
+    def load(self, audio, input_name=""):
         from comfy_extras.nodes_audio import load
 
         audio_path = folder_paths.get_annotated_filepath(audio)
@@ -41,7 +48,12 @@ class PymssLoadAudioBatch:
                 "folder": ("STRING", {"default": "", "multiline": False}),
                 "recursive": ("BOOLEAN", {"default": False}),
                 "sort_files": ("BOOLEAN", {"default": True}),
-            }
+            },
+            "optional": {
+                # Same runtime-input metadata as PymssLoadAudio; hosts that feed
+                # a file list at run time (pymss-studio) key it by this name.
+                "input_name": ("STRING", {"default": "", "multiline": False}),
+            },
         }
 
     RETURN_TYPES = ("AUDIO", "STRING")
@@ -50,7 +62,7 @@ class PymssLoadAudioBatch:
     FUNCTION = "load"
     CATEGORY = CATEGORY
 
-    def load(self, folder, recursive, sort_files):
+    def load(self, folder, recursive, sort_files, input_name=""):
         paths = scan_audio_folder(folder, recursive, AUDIO_EXTENSIONS)
         audios, audio_names = load_audio_paths(
             paths=paths,
