@@ -61,16 +61,6 @@ export function colorLink(graph, link) {
   }
 }
 
-export function colorGraphLinks(graph) {
-  if (!graph) {
-    return;
-  }
-  const links = graph._links instanceof Map ? graph._links.values() : Object.values(graph.links ?? {});
-  for (const link of links) {
-    colorLink(graph, link);
-  }
-}
-
 export function colorSlot(slot) {
   const color = typeColor(slot?.type);
   if (!slot || !color) {
@@ -88,7 +78,6 @@ export function colorNodeSlots(node) {
   for (const output of node.outputs ?? []) {
     colorSlot(output);
   }
-  colorGraphLinks(node.graph);
 }
 
 export function applyLinkColorPatch(app) {

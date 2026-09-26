@@ -5,6 +5,7 @@ import { resizeNodeKeepingWidth } from "./sizing.js";
 import { disconnectOutput, getWidget } from "./utils.js";
 
 const catalogByKind = new Map();
+const catalogPendingByKind = new Map();
 const NOT_DOWNLOADED_PREFIX = "[Not downloaded] ";
 const NOT_DOWNLOADED_COLOR = "#8a8a8a";
 let notDownloadedDisplayNames = new Set();
@@ -18,19 +19,37 @@ function catalogKey(node) {
   return "custom";
 }
 
-async function getCatalog(api, node, force = false) {
+export async function getCatalog(api, node, force = false) {
   const key = catalogKey(node);
-  if (force || !catalogByKind.has(key)) {
-    const kind = modelKind(node) === "custom" ? "custom" : "all";
-    const params = new URLSearchParams({ kind });
+  if (catalogPendingByKind.has(key)) {
+    return catalogPendingByKind.get(key);
+  }
+  if (!force && catalogByKind.has(key)) {
+    return catalogByKind.get(key);
+  }
+
+  const kind = modelKind(node) === "custom" ? "custom" : "all";
+  const params = new URLSearchParams({ kind });
+  const request = (async () => {
     const response = await api.fetchApi(`/comfy-mss/models?${params}`);
+    if (!response.ok) {
+      throw new Error(`Failed to load model catalog: ${response.status} ${response.statusText}`);
+    }
     const payload = await response.json();
     const catalog = Array.isArray(payload) ? payload : payload.models;
     catalogByKind.set(key, catalog);
     rebuildNotDownloadedDisplayNames();
     styleOpenModelMenus();
+    return catalog;
+  })();
+  catalogPendingByKind.set(key, request);
+  try {
+    return await request;
+  } finally {
+    if (catalogPendingByKind.get(key) === request) {
+      catalogPendingByKind.delete(key);
+    }
   }
-  return catalogByKind.get(key);
 }
 
 function rebuildNotDownloadedDisplayNames() {
@@ -129,12 +148,12 @@ function ensureModelMenuStyleObserver() {
   });
 }
 
-async function refreshModelWidgetOptions(node, api) {
+async function refreshModelWidgetOptions(node, api, force = false) {
   const widget = getWidget(node, "model_name");
   if (!widget) {
-    return;
+    return false;
   }
-  const models = modelsForNode(await getCatalog(api, node, true), node);
+  const models = modelsForNode(await getCatalog(api, node, force), node);
   const values = models.map((item) => localizedModelDisplayName(item));
   const currentName = cleanModelDisplayName(widget.value);
   const currentModel = models.find((item) => matchesModelName(item, currentName));
@@ -150,6 +169,16 @@ async function refreshModelWidgetOptions(node, api) {
   }
 
   node.setDirtyCanvas(true, true);
+  return true;
+}
+
+export async function tryRefreshModelWidgetOptions(node, api, force = false) {
+  try {
+    return await refreshModelWidgetOptions(node, api, force);
+  } catch (error) {
+    console.warn("[comfy-mss] failed to refresh model options", error);
+    return false;
+  }
 }
 
 async function stemsForNode(node, api) {
@@ -198,10 +227,10 @@ export function syncOutputs(node, stems) {
   ]);
 
   for (let index = (node.outputs?.length ?? 0) - 1; index >= desired.length; index -= 1) {
-    disconnectOutput(node, index);
     if (typeof node.removeOutput === "function") {
       node.removeOutput(index);
     } else {
+      disconnectOutput(node, index);
       node.outputs?.splice(index, 1);
     }
   }
@@ -227,22 +256,32 @@ export function syncOutputs(node, stems) {
   node.setDirtyCanvas(true, true);
 }
 
-async function refreshNodeOutputs(node, api) {
+export async function refreshNodeOutputs(node, api, generation = node.comfyMssOutputRefreshGeneration ?? 0) {
   if (isListNode(node)) {
     return;
   }
+  const selectedModel = getWidget(node, "model_name")?.value;
   try {
-    syncOutputs(node, await stemsForNode(node, api));
+    const stems = await stemsForNode(node, api);
+    if (
+      generation !== (node.comfyMssOutputRefreshGeneration ?? 0) ||
+      selectedModel !== getWidget(node, "model_name")?.value
+    ) {
+      return;
+    }
+    syncOutputs(node, stems);
   } catch (error) {
     console.warn("[comfy-mss] failed to refresh outputs", error);
   }
 }
 
 function scheduleRefreshNodeOutputs(node, api) {
-  setTimeout(() => refreshNodeOutputs(node, api), 0);
-  setTimeout(() => refreshNodeOutputs(node, api), 250);
-  setTimeout(() => refreshNodeOutputs(node, api), 1000);
-  setTimeout(() => refreshNodeOutputs(node, api), 2000);
+  const generation = (node.comfyMssOutputRefreshGeneration ?? 0) + 1;
+  node.comfyMssOutputRefreshGeneration = generation;
+  setTimeout(() => refreshNodeOutputs(node, api, generation), 0);
+  setTimeout(() => refreshNodeOutputs(node, api, generation), 250);
+  setTimeout(() => refreshNodeOutputs(node, api, generation), 1000);
+  setTimeout(() => refreshNodeOutputs(node, api, generation), 2000);
 }
 
 function addRefreshModelsButton(node, api) {
@@ -251,8 +290,9 @@ function addRefreshModelsButton(node, api) {
   }
   node.comfyMssRefreshModelsButtonAdded = true;
   const button = node.addWidget("button", t("refreshModels", "Refresh Models"), null, async () => {
-    await refreshModelWidgetOptions(node, api);
-    scheduleRefreshNodeOutputs(node, api);
+    if (await tryRefreshModelWidgetOptions(node, api, true)) {
+      scheduleRefreshNodeOutputs(node, api);
+    }
   });
   button.comfyMssI18nKey = "refreshModels";
 }
@@ -272,9 +312,23 @@ function syncLanguage(node, api) {
       widget.localized_name = label;
     }
   }
-  refreshModelWidgetOptions(node, api).then(() => {
+  const finishRefresh = () => {
     scheduleRefreshNodeOutputs(node, api);
     translateNodeLabels(node);
+  };
+  tryRefreshModelWidgetOptions(node, api).then((refreshed) => {
+    if (refreshed) {
+      finishRefresh();
+      return;
+    }
+    setTimeout(async () => {
+      if (node.comfyMssSeparateLanguage !== language) {
+        return;
+      }
+      if (await tryRefreshModelWidgetOptions(node, api)) {
+        finishRefresh();
+      }
+    }, 1000);
   });
 }
 
@@ -291,7 +345,9 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
         return callbackResult;
       };
     }
-    refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
+    tryRefreshModelWidgetOptions(this, api).then((refreshed) => {
+      if (refreshed) scheduleRefreshNodeOutputs(this, api);
+    });
     scheduleRefreshNodeOutputs(this, api);
     syncLanguage(this, api);
   });
@@ -302,7 +358,9 @@ export function registerSeparateNode(nodeType, wrapOnNodeCreated, api) {
     colorNodeSlots(this);
     setTimeout(() => {
       addRefreshModelsButton(this, api);
-      refreshModelWidgetOptions(this, api).then(() => scheduleRefreshNodeOutputs(this, api));
+      tryRefreshModelWidgetOptions(this, api).then((refreshed) => {
+        if (refreshed) scheduleRefreshNodeOutputs(this, api);
+      });
       syncLanguage(this, api);
     }, 0);
     scheduleRefreshNodeOutputs(this, api);
