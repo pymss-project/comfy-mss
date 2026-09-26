@@ -82,6 +82,7 @@ function cleanModelDisplayName(value) {
 
 function normalizeModelName(value) {
   return cleanModelDisplayName(value)
+    .replace(/^\[[^\]]+\]\s*/, "")
     .replaceAll("\\", "/")
     .split("/")
     .pop()
@@ -89,10 +90,12 @@ function normalizeModelName(value) {
     .toLowerCase();
 }
 
-function matchesModelName(item, modelName) {
+export function matchesModelName(item, modelName) {
   const target = normalizeModelName(modelName);
-  const names = [item?.name, item?.display_name, item?.display_name_cn, ...(item?.aliases ?? [])].map(normalizeModelName);
-  return names.some((name) => target === name || target.endsWith(name));
+  const names = [item?.name, item?.display_name, item?.display_name_cn, ...(item?.aliases ?? [])]
+    .map(normalizeModelName)
+    .filter(Boolean);
+  return Boolean(target) && names.includes(target);
 }
 
 function modelsForNode(models, node) {
@@ -163,6 +166,9 @@ async function stemsForNode(node, api) {
   if (!model) {
     console.warn("[comfy-mss] model not found in catalog", { modelName, kind });
   }
+  if (model?.stems_complete === false) {
+    return null;
+  }
   return model?.stems?.length ? model.stems : null;
 }
 
@@ -176,12 +182,10 @@ function setOutput(output, name, type) {
   output.color = color ?? output.color;
 }
 
-function syncOutputs(node, stems) {
+export function syncOutputs(node, stems) {
   if (!stems?.length) {
     if (modelKind(node) === "vr") {
       stems = ["primary", "secondary"];
-    } else if (modelKind(node) === "custom") {
-      stems = [];
     } else {
       return;
     }

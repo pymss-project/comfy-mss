@@ -1,12 +1,36 @@
+import asyncio
 import os
+import shutil
 
-from aiohttp import web
 import folder_paths
+from aiohttp import web
 from server import PromptServer
-from ..constants import MODEL_DIR_ENV_VARS
-from ..constants import AUDIO_EXTENSIONS
+
+from ..constants import AUDIO_EXTENSIONS, MODEL_DIR_ENV_VARS
 from ..paths import registered_model_dirs
 from .catalog import custom_model_catalog, model_catalog
+
+
+def _store_uploaded_file(upload_dir, filename, source):
+    stem, ext = os.path.splitext(filename)
+    for index in range(10000):
+        candidate_name = filename if index == 0 else f"{stem} ({index}){ext}"
+        candidate = os.path.realpath(os.path.join(upload_dir, candidate_name))
+        if os.path.commonpath((upload_dir, candidate)) != upload_dir:
+            raise ValueError("invalid audio filename")
+        try:
+            with open(candidate, "xb") as handle:
+                shutil.copyfileobj(source, handle, length=1024 * 1024)
+            return candidate
+        except FileExistsError:
+            continue
+        except Exception:
+            try:
+                os.unlink(candidate)
+            except OSError:
+                pass
+            raise
+    raise FileExistsError("could not allocate a unique audio filename")
 
 
 def register_routes():
@@ -46,15 +70,8 @@ def register_routes():
 
         upload_dir = os.path.realpath(folder_paths.get_input_directory())
         os.makedirs(upload_dir, exist_ok=True)
-        stem, ext = os.path.splitext(filename)
-        path = os.path.realpath(os.path.join(upload_dir, filename))
-        if os.path.commonpath((upload_dir, path)) != upload_dir:
+        try:
+            path = await asyncio.to_thread(_store_uploaded_file, upload_dir, filename, upload.file)
+        except ValueError:
             return web.Response(status=400, text="invalid audio filename")
-        index = 1
-        while os.path.exists(path):
-            path = os.path.realpath(os.path.join(upload_dir, f"{stem} ({index}){ext}"))
-            index += 1
-
-        with open(path, "wb") as handle:
-            handle.write(upload.file.read())
         return web.json_response({"name": os.path.basename(path)})

@@ -1,29 +1,20 @@
 import os
 import re
+from functools import lru_cache
+
 import pymss
 import yaml
-
-from functools import lru_cache
 from pymss.modules.vocal_remover.vr_models import VR_MODEL_METADATA
 
+from ..constants import CUSTOM_MODEL_DIR_NAME, CUSTOM_MODEL_EXTENSIONS, NOT_DOWNLOADED_PREFIX
 from ..paths import registered_model_dirs
-from ..constants import NOT_DOWNLOADED_PREFIX, CUSTOM_MODEL_DIR_NAME, CUSTOM_MODEL_EXTENSIONS
 
 
 def clean_model_display_name(model_name):
     name = str(model_name or "").strip()
     if name.startswith(NOT_DOWNLOADED_PREFIX):
         name = name[len(NOT_DOWNLOADED_PREFIX) :].strip()
-    try:
-        for item in model_catalog("all"):
-            names = [item["name"], item["display_name"], item.get("display_name_cn"), *item.get("aliases", [])]
-            if name in names:
-                return item["name"]
-            if name.endswith(item["name"]) and name[: -len(item["name"])].strip().startswith("["):
-                return item["name"]
-    except Exception:
-        pass
-    return name
+    return re.sub(r"^\[[^\]]+\]\s*", "", name).strip()
 
 
 def entry_category_label(entry):
@@ -74,20 +65,36 @@ def split_stems(value):
     return [item.strip() for item in re.split(r"[|/]", value or "") if item.strip()]
 
 
-def entry_stems(entry):
+def entry_stems(entry, model_dirs=None):
     # ``config_instruments`` is only available in newer pymss releases.
     # Catalog loading must remain compatible with older ModelEntry objects.
     stems = split_stems(getattr(entry, "config_instruments", None))
     if stems:
-        return stems
+        return stems, True
 
     if entry.model_type == "vr":
         data = VR_MODEL_METADATA.get(entry.name)
         if data:
-            return [data["primary_stem"], data["secondary_stem"]]
+            return [data["primary_stem"], data["secondary_stem"]], True
+
+    config_relpath = str(getattr(entry, "config_relpath", "") or "").strip()
+    if config_relpath:
+        for model_dir in model_dirs or registered_model_dirs(create=True):
+            config_path = os.path.join(model_dir, config_relpath)
+            if not os.path.isfile(config_path):
+                continue
+            try:
+                stems = custom_entry_stems(_load_yaml(config_path))
+            except (AttributeError, OSError, UnicodeError, yaml.YAMLError, TypeError, ValueError):
+                continue
+            if stems != ["audio"]:
+                return stems, True
 
     stems = split_stems(getattr(entry, "target_stem", None))
-    return stems or ["audio"]
+    # A slash-separated catalog target is already a complete multi-stem list.
+    # A single target may omit the complementary residual stem, so preserve the
+    # node's generic outputs until the model config is locally available.
+    return stems or ["audio"], len(stems) > 1
 
 
 def _load_yaml(path):
@@ -155,7 +162,7 @@ def custom_model_catalog():
                 continue
             try:
                 config = _load_yaml(config_file.path)
-            except Exception:
+            except (AttributeError, OSError, TypeError, UnicodeError, ValueError, yaml.YAMLError):
                 continue
             if not isinstance(config, dict):
                 continue
@@ -194,29 +201,36 @@ def custom_stem_names(model_name):
     return entry["stems"] if entry else ["audio"]
 
 
-def is_model_downloaded(entry, model_dir=None):
+def is_model_downloaded(entry, model_dir=None, model_dirs=None):
     if not entry.relpath:
         return False
-    model_dirs = [model_dir] if model_dir else registered_model_dirs(create=True)
-    return any(os.path.isfile(os.path.join(path, entry.relpath)) for path in model_dirs)
+    if model_dirs is None:
+        model_dirs = [model_dir] if model_dir else registered_model_dirs(create=True)
+    required_relpaths = [entry.relpath]
+    if getattr(entry, "config_relpath", ""):
+        required_relpaths.append(entry.config_relpath)
+    required_relpaths.extend(getattr(entry, "auxiliary_relpaths", ()) or ())
+    return any(
+        all(os.path.isfile(os.path.join(path, relpath)) for relpath in required_relpaths)
+        for path in model_dirs
+    )
 
 
 @lru_cache(maxsize=1)
 def _base_model_entries():
-    rows = []
-    for entry in pymss.list_models(supported=True):
-        rows.append(entry)
-    return rows
+    return list(pymss.list_models(supported=True))
 
 
 def model_catalog(model_kind="all"):
     rows = []
+    model_dirs = registered_model_dirs(create=True)
     for entry in _base_model_entries():
         if model_kind == "vr" and entry.model_type != "vr":
             continue
         if model_kind == "mss" and entry.model_type == "vr":
             continue
-        downloaded = is_model_downloaded(entry)
+        downloaded = is_model_downloaded(entry, model_dirs=model_dirs)
+        stems, stems_complete = entry_stems(entry, model_dirs)
         display_name = entry_display_name(entry, downloaded)
         rows.append(
             {
@@ -234,7 +248,8 @@ def model_catalog(model_kind="all"):
                 "category_cn": " / ".join(part for part in (entry.primary_category_cn, entry.secondary_category_cn) if part),
                 "display_name_cn": f"{entry_category_label_cn(entry)}{entry.name}",
                 "target_stem": entry.target_stem,
-                "stems": entry_stems(entry),
+                "stems": stems,
+                "stems_complete": stems_complete,
             }
         )
     rows.sort(

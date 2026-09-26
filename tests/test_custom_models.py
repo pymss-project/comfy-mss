@@ -1,9 +1,11 @@
 import importlib
-from pathlib import Path
+import io
 import sys
 import tempfile
 import types
 import unittest
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import torch
@@ -33,16 +35,21 @@ class CustomModelTests(unittest.TestCase):
                 self.total = total
 
         comfy.utils.ProgressBar = ProgressBar
+        server = types.ModuleType("server")
+        server.PromptServer = None
         host_modules = patch.dict(sys.modules, {
             "folder_paths": cls.folder_paths,
             "comfy": comfy,
             "comfy.utils": comfy.utils,
+            "server": server,
         })
         host_modules.start()
         cls.addClassCleanup(host_modules.stop)
         cls.catalog = importlib.import_module("comfy_mss.services.catalog")
         cls.separation = importlib.import_module("comfy_mss.nodes.separate")
+        cls.audio_nodes = importlib.import_module("comfy_mss.nodes.audio")
         cls.params = importlib.import_module("comfy_mss.nodes.params")
+        cls.routes = importlib.import_module("comfy_mss.services.routes")
 
     def setUp(self):
         self.model_root = Path(self.workspace.name) / self._testMethodName
@@ -91,12 +98,51 @@ class CustomModelTests(unittest.TestCase):
         rows = self.catalog.custom_model_catalog()
         self.assertEqual(rows[0]["model_type"], "apollo")
 
+    def test_decorated_model_names_do_not_collapse_to_filename_suffixes(self):
+        selected = "[vocal/vocal_instrumental_dual] melband_roformer_instvoc_duality_v1.ckpt"
+        self.assertEqual(
+            self.catalog.clean_model_display_name(selected),
+            "melband_roformer_instvoc_duality_v1.ckpt",
+        )
+
     def test_catalog_reads_tuple_yaml_and_preserves_stem_names(self):
         self.write_model(self.polarformer_config())
         rows = self.catalog.custom_model_catalog()
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["model_type"], "bs_roformer")
         self.assertEqual(rows[0]["stems"], ["lead", "back_instrum"])
+
+    def test_catalog_reads_complete_stems_from_a_downloaded_config(self):
+        config_path = self.model_root / "catalog" / "model.yaml"
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text(yaml.safe_dump({"training": {"instruments": ["vocals", "instrumental"]}}), encoding="utf-8")
+        entry = SimpleNamespace(
+            name="model.ckpt",
+            model_type="mel_band_roformer",
+            config_instruments="",
+            config_relpath="catalog/model.yaml",
+            target_stem="vocals",
+        )
+
+        stems, complete = self.catalog.entry_stems(entry, [str(self.model_root)])
+
+        self.assertEqual(stems, ["vocals", "instrumental"])
+        self.assertTrue(complete)
+
+    def test_download_state_requires_weights_config_and_auxiliary_files(self):
+        model_dir = self.model_root / "catalog"
+        model_dir.mkdir(parents=True)
+        entry = SimpleNamespace(
+            relpath="catalog/model.ckpt",
+            config_relpath="catalog/model.yaml",
+            auxiliary_relpaths=("catalog/model.json",),
+        )
+        (model_dir / "model.ckpt").touch()
+        self.assertFalse(self.catalog.is_model_downloaded(entry, str(self.model_root)))
+        (model_dir / "model.yaml").touch()
+        self.assertFalse(self.catalog.is_model_downloaded(entry, str(self.model_root)))
+        (model_dir / "model.json").touch()
+        self.assertTrue(self.catalog.is_model_downloaded(entry, str(self.model_root)))
 
     def test_catalog_keeps_unknown_models_for_manual_selection_and_excludes_vr(self):
         self.write_model({"model": {"dim": 8}}, "unknown")
@@ -157,6 +203,73 @@ class CustomModelTests(unittest.TestCase):
         self.assert_stems(*output, sample_rate=44100, sample_count=441)
         self.assertEqual(tuple(source["waveform"].shape), (1, 2, 480))
         self.assertEqual(source["sample_rate"], 48000)
+
+    def test_separator_config_restores_complementary_stems(self):
+        separator = SimpleNamespace(
+            config=SimpleNamespace(training=SimpleNamespace(instruments=["vocals", "instrumental"]))
+        )
+        self.assertEqual(
+            self.separation.separator_stems(separator, ["vocals"]),
+            ["vocals", "instrumental"],
+        )
+
+    def test_ensemble_upmixes_mono_without_dropping_stereo_channels(self):
+        stereo = {
+            "waveform": torch.tensor([[[1.0, 1.0], [9.0, 9.0]]]),
+            "sample_rate": 44100,
+        }
+        mono = {
+            "waveform": torch.tensor([[[3.0, 3.0]]]),
+            "sample_rate": 44100,
+        }
+
+        result = self.audio_nodes.PymssAudioEnsemble().ensemble(
+            "2",
+            "avg_wave",
+            audio_1=stereo,
+            audio_2=mono,
+            weight_1="1",
+            weight_2="1",
+        )[0]
+
+        self.assertEqual(tuple(result["waveform"].shape), (1, 2, 2))
+        torch.testing.assert_close(
+            result["waveform"],
+            torch.tensor([[[2.0, 2.0], [6.0, 6.0]]]),
+        )
+
+    def test_ensemble_rejects_incompatible_multichannel_inputs_and_nonfinite_weights(self):
+        stereo = {"waveform": torch.zeros(1, 2, 2), "sample_rate": 44100}
+        surround = {"waveform": torch.zeros(1, 6, 2), "sample_rate": 44100}
+        with self.assertRaisesRegex(ValueError, "expected 1 or 6"):
+            self.audio_nodes.PymssAudioEnsemble().ensemble(
+                "2", "avg_wave", audio_1=stereo, audio_2=surround, weight_1="1", weight_2="1"
+            )
+        with self.assertRaisesRegex(ValueError, "finite number"):
+            self.audio_nodes.parse_weight("nan", 1)
+
+    def test_ensemble_resamples_without_torchaudio(self):
+        reference = {"waveform": torch.ones(1, 1, 441), "sample_rate": 44100}
+        source = {"waveform": torch.ones(1, 1, 480), "sample_rate": 48000}
+
+        result = self.audio_nodes.PymssAudioEnsemble().ensemble(
+            "2", "avg_wave", audio_1=reference, audio_2=source, weight_1="1", weight_2="1"
+        )[0]
+
+        self.assertEqual(result["sample_rate"], 44100)
+        self.assertEqual(tuple(result["waveform"].shape), (1, 1, 441))
+
+    def test_upload_storage_streams_and_allocates_unique_names(self):
+        upload_dir = self.model_root / "uploads"
+        upload_dir.mkdir(parents=True)
+
+        first = self.routes._store_uploaded_file(str(upload_dir), "song.wav", io.BytesIO(b"first"))
+        second = self.routes._store_uploaded_file(str(upload_dir), "song.wav", io.BytesIO(b"second"))
+
+        self.assertEqual(Path(first).name, "song.wav")
+        self.assertEqual(Path(second).name, "song (1).wav")
+        self.assertEqual(Path(first).read_bytes(), b"first")
+        self.assertEqual(Path(second).read_bytes(), b"second")
 
     def test_nested_yaml_architecture_loads_without_changing_config(self):
         for field in ("type", "model_type", "architecture"):
