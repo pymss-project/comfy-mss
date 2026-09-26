@@ -103,7 +103,12 @@ def _load_yaml(path):
 
 
 def custom_entry_stems(config):
-    instruments = config.get("training", {}).get("instruments", [])
+    if not isinstance(config, dict):
+        return ["audio"]
+    training = config.get("training")
+    if not isinstance(training, dict):
+        return ["audio"]
+    instruments = training.get("instruments", [])
     if not isinstance(instruments, list):
         return ["audio"]
     stems = [str(item).strip() for item in instruments if str(item).strip()]
@@ -201,19 +206,34 @@ def custom_stem_names(model_name):
     return entry["stems"] if entry else ["audio"]
 
 
-def is_model_downloaded(entry, model_dir=None, model_dirs=None):
+def required_model_relpaths(entry):
     if not entry.relpath:
-        return False
-    if model_dirs is None:
-        model_dirs = [model_dir] if model_dir else registered_model_dirs(create=True)
+        return []
     required_relpaths = [entry.relpath]
     if getattr(entry, "config_relpath", ""):
         required_relpaths.append(entry.config_relpath)
     required_relpaths.extend(getattr(entry, "auxiliary_relpaths", ()) or ())
-    return any(
-        all(os.path.isfile(os.path.join(path, relpath)) for relpath in required_relpaths)
-        for path in model_dirs
+    return required_relpaths
+
+
+def model_dir_for_entry(entry, model_dir=None, model_dirs=None):
+    if model_dirs is None:
+        model_dirs = [model_dir] if model_dir else registered_model_dirs(create=True)
+    required_relpaths = required_model_relpaths(entry)
+    if not required_relpaths:
+        return None
+    return next(
+        (
+            path
+            for path in model_dirs
+            if all(os.path.isfile(os.path.join(path, relpath)) for relpath in required_relpaths)
+        ),
+        None,
     )
+
+
+def is_model_downloaded(entry, model_dir=None, model_dirs=None):
+    return model_dir_for_entry(entry, model_dir=model_dir, model_dirs=model_dirs) is not None
 
 
 @lru_cache(maxsize=1)
@@ -229,8 +249,14 @@ def model_catalog(model_kind="all"):
             continue
         if model_kind == "mss" and entry.model_type == "vr":
             continue
-        downloaded = is_model_downloaded(entry, model_dirs=model_dirs)
-        stems, stems_complete = entry_stems(entry, model_dirs)
+        downloaded_dir = model_dir_for_entry(entry, model_dirs=model_dirs)
+        downloaded = downloaded_dir is not None
+        stem_model_dirs = (
+            [downloaded_dir] + [path for path in model_dirs if path != downloaded_dir]
+            if downloaded
+            else model_dirs
+        )
+        stems, stems_complete = entry_stems(entry, stem_model_dirs)
         display_name = entry_display_name(entry, downloaded)
         rows.append(
             {
@@ -250,6 +276,7 @@ def model_catalog(model_kind="all"):
                 "target_stem": entry.target_stem,
                 "stems": stems,
                 "stems_complete": stems_complete,
+                "model_dir": downloaded_dir,
             }
         )
     rows.sort(
@@ -263,9 +290,14 @@ def model_catalog(model_kind="all"):
     return rows
 
 
-def stem_names(model_name, model_kind):
+def model_catalog_entry(model_name, model_kind):
     model_name = clean_model_display_name(model_name)
     for item in model_catalog(model_kind):
-        if item["name"] == model_name:
-            return item["stems"]
-    return ["audio"]
+        if item["name"] == model_name or model_name in item.get("aliases", []):
+            return item
+    return None
+
+
+def stem_names(model_name, model_kind):
+    entry = model_catalog_entry(model_name, model_kind)
+    return entry["stems"] if entry else ["audio"]
