@@ -9,7 +9,7 @@ function inputCountValue(node) {
   return Math.max(2, Math.min(10, Number.isFinite(value) ? value : 2));
 }
 
-function syncAudioEnsembleInputs(node) {
+export function syncAudioEnsembleInputs(node) {
   const count = inputCountValue(node);
   const desired = Array.from({ length: count }, (_value, index) => `audio_${index + 1}`);
 
@@ -18,34 +18,26 @@ function syncAudioEnsembleInputs(node) {
     const input = node.inputs[index];
     const audioMatch = /^audio_(\d+)$/.exec(input.name ?? "");
     if (audioMatch && Number.parseInt(audioMatch[1], 10) > count) {
-      disconnectInput(node, index);
       if (typeof node.removeInput === "function") {
         node.removeInput(index);
       } else {
+        disconnectInput(node, index);
         node.inputs.splice(index, 1);
       }
     }
   }
 
-  for (let index = 0; index < desired.length; index += 1) {
-    const name = desired[index];
-    if (!node.inputs[index] || node.inputs[index].name !== name) {
-      const existingIndex = node.inputs.findIndex((input) => input.name === name);
-      if (existingIndex >= 0) {
-        const [existing] = node.inputs.splice(existingIndex, 1);
-        node.inputs.splice(index, 0, existing);
-      } else {
-        node.addInput(name, "AUDIO", {
-          color_on: TYPE_COLORS.AUDIO,
-          color_off: TYPE_COLORS.AUDIO,
-        });
-        const [created] = node.inputs.splice(node.inputs.length - 1, 1);
-        node.inputs.splice(index, 0, created);
-      }
+  for (const name of desired) {
+    let input = node.inputs.find((candidate) => candidate.name === name);
+    if (!input) {
+      node.addInput(name, "AUDIO", {
+        color_on: TYPE_COLORS.AUDIO,
+        color_off: TYPE_COLORS.AUDIO,
+      });
+      input = node.inputs[node.inputs.length - 1];
     }
-    colorSlot(node.inputs[index]);
+    colorSlot(input);
   }
-  node.inputs.length = desired.length;
 
   for (const widget of node.widgets ?? []) {
     const weightMatch = /^weight_(\d+)$/.exec(widget.name ?? "");

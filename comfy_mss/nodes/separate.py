@@ -1,5 +1,6 @@
+from typing import ClassVar
+
 import comfy.utils
-import numpy as np
 import torch
 from pymss import MSSeparator
 
@@ -10,8 +11,8 @@ from ..services.catalog import (
     custom_model_entry,
     custom_model_names,
     custom_stem_names,
+    model_catalog_entry,
     model_names,
-    stem_names,
 )
 from ..utils.audio import audio_source_path, audio_to_numpy, numpy_to_audio, resample_audio
 
@@ -34,7 +35,7 @@ def make_comfy_progress_callback():
     return progress_callback
 
 
-def collect_stem_outputs(results, stems, mix, sample_rate, source_path):
+def collect_stem_outputs(results, stems, sample_rate, source_path):
     outputs = []
     stem_outputs = []
     for stem in stems:
@@ -42,9 +43,13 @@ def collect_stem_outputs(results, stems, mix, sample_rate, source_path):
         if value is None:
             lower = stem.lower()
             value = next((audio_value for key, audio_value in results.items() if key.lower() == lower), None)
+        if value is None and stem == "audio" and len(results) == 1:
+            value = next(iter(results.values()))
+        if value is None:
+            raise ValueError(f"Model did not produce requested stem {stem!r}; available stems: {sorted(results)}")
         outputs.append(
             numpy_to_audio(
-                value if value is not None else np.zeros_like(mix),
+                value,
                 sample_rate,
                 stem_name=stem,
                 source_path=source_path,
@@ -99,29 +104,43 @@ def separator_sample_rate(separator, fallback):
     return sample_rate if sample_rate > 0 else int(fallback)
 
 
+def separator_stems(separator, fallback):
+    config = getattr(separator, "config", None)
+    training = getattr(config, "training", None) if config is not None else None
+    instruments = getattr(training, "instruments", None) if training is not None else None
+    if isinstance(instruments, (list, tuple)):
+        stems = [str(item).strip() for item in instruments if str(item).strip()]
+        if stems:
+            return stems
+    return list(fallback or ["audio"])
+
+
 def run_separation(audio, stems, separator_factory):
     mix, input_sample_rate = audio_to_numpy(audio)
     source_path = audio_source_path(audio)
 
     with torch.inference_mode(False), separator_factory() as separator:
         model_sample_rate = separator_sample_rate(separator, input_sample_rate)
+        stems = separator_stems(separator, stems)
         model_mix, model_sample_rate = resample_audio(mix, input_sample_rate, model_sample_rate)
         results = separator.separate(model_mix, pbar=True, stems=stems)
 
-    return collect_stem_outputs(results, stems, model_mix, model_sample_rate, source_path)
+    return collect_stem_outputs(results, stems, model_sample_rate, source_path)
 
 
 def separate_model_audio(
     audio, model_name, model_kind, params, download_missing, source, device, device_ids_raw, use_tta, debug
 ):
     model_name = clean_model_display_name(model_name)
-    stems = stem_names(model_name, model_kind)
+    catalog_entry = model_catalog_entry(model_name, model_kind)
+    stems = catalog_entry["stems"] if catalog_entry else ["audio"]
+    model_dir = (catalog_entry or {}).get("model_dir") or resolve_model_dir()
     separator_kwargs = common_separator_kwargs(stems, params, device, device_ids_raw, use_tta, debug)
 
     def separator_factory():
         return MSSeparator.from_model_name(
             model_name,
-            model_dir=resolve_model_dir(),
+            model_dir=model_dir,
             download=bool(download_missing),
             source=source,
             **separator_kwargs,
@@ -314,7 +333,7 @@ class PymssMssSeparateList(_SeparateListBase):
 class _CustomSeparateBase(_SeparateOutputBase):
     MODEL_KIND = "custom"
     PARAM_TYPE = MSS_PARAMS_TYPE
-    MODEL_TYPES = [
+    MODEL_TYPES: ClassVar[list[str]] = [
         "auto",
         "mel_band_roformer",
         "bs_roformer",
