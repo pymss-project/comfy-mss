@@ -91,6 +91,10 @@ The list variants, `MSS Separate List` and `VR Separate List`, use the same inpu
 - `audios`: separated stem audio list.
 - `stem_names`: matching stem name list.
 
+All separation nodes resample incoming audio to the sample rate declared by the selected model before inference.
+Returned ComfyUI `AUDIO` values carry that model sample rate. This keeps the frequency and time axes aligned
+with the model's training configuration; downstream save nodes may still explicitly convert the result to another output rate.
+
 ### Custom MSS Separate
 
 `Custom MSS Separate` supports MSST models only; VR/UVR models are not supported by this custom-model workflow. It scans the `custom` folder located under the pymss model root: `<pymss_model_dir>/custom` (for example, `E:/AI/Pymss-Studio/models/custom` when `pymss` is `E:/AI/Pymss-Studio/models`). Each custom model needs its own direct child folder. The node displays that folder's name, and only lists folders containing both a supported model file and a YAML config file, for example:

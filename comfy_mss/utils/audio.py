@@ -54,6 +54,23 @@ def numpy_to_comfy_audio(audio, sample_rate):
     return {"waveform": torch.from_numpy(np.ascontiguousarray(array)).unsqueeze(0), "sample_rate": int(sample_rate)}
 
 
+def resample_audio(waveform, source_sample_rate, target_sample_rate):
+    source_sample_rate = int(source_sample_rate)
+    target_sample_rate = int(target_sample_rate)
+    array = np.asarray(waveform, dtype=np.float32)
+    if source_sample_rate <= 0 or target_sample_rate <= 0:
+        raise ValueError("sample rates must be positive integers.")
+    if source_sample_rate == target_sample_rate or array.size == 0:
+        return array, source_sample_rate
+
+    # Match pymss' graph execution path. pymss guarantees librosa as a
+    # dependency, while torchaudio is not part of pymss' public requirements.
+    from pymss.plugins.builtins import resample
+
+    converted = resample(array, source_sample_rate, target_sample_rate)
+    return np.asarray(converted, dtype=np.float32), target_sample_rate
+
+
 def attach_audio_metadata(audio, source_path=None, stem_name=None):
     audio = dict(audio)
     if source_path:

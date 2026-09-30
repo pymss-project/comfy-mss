@@ -75,16 +75,16 @@ class CustomModelTests(unittest.TestCase):
             "inference": {"batch_size": 1, "num_overlap": 2},
         }
 
-    def assert_stems(self, audios, stems):
+    def assert_stems(self, audios, stems, sample_rate=44100, sample_count=256):
         self.assertEqual(stems, ["lead", "back_instrum"])
         for audio, stem in zip(audios, stems):
-            self.assertEqual(tuple(audio["waveform"].shape), (1, 2, 256))
-            self.assertEqual(audio["sample_rate"], 44100)
+            self.assertEqual(tuple(audio["waveform"].shape), (1, 2, sample_count))
+            self.assertEqual(audio["sample_rate"], sample_rate)
             self.assertEqual(audio["pymss_stem_name"], stem)
             self.assertTrue(torch.isfinite(audio["waveform"]).all())
 
-    def audio(self):
-        return {"waveform": torch.randn(1, 2, 256), "sample_rate": 44100}
+    def audio(self, sample_rate=44100, sample_count=256):
+        return {"waveform": torch.randn(1, 2, sample_count), "sample_rate": sample_rate}
 
     def test_catalog_uses_upstream_architecture_detection(self):
         self.write_model({"model": {"sr": 44100, "win": 20, "feature_dim": 128, "layer": 6}}, "Apollo")
@@ -146,6 +146,17 @@ class CustomModelTests(unittest.TestCase):
         with torch.inference_mode():
             output = self.separation.PymssCustomMssSeparateList().separate(self.audio(), "BS-PF-SV", "bs_roformer", "cpu")
         self.assert_stems(*output)
+
+    def test_separation_resamples_input_to_the_model_sample_rate(self):
+        self.write_model(self.polarformer_config(), weights=True)
+        source = self.audio(sample_rate=48000, sample_count=480)
+
+        with torch.inference_mode():
+            output = self.separation.PymssCustomMssSeparateList().separate(source, "BS-PF-SV", "auto", "cpu")
+
+        self.assert_stems(*output, sample_rate=44100, sample_count=441)
+        self.assertEqual(tuple(source["waveform"].shape), (1, 2, 480))
+        self.assertEqual(source["sample_rate"], 48000)
 
     def test_nested_yaml_architecture_loads_without_changing_config(self):
         for field in ("type", "model_type", "architecture"):

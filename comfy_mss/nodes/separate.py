@@ -1,8 +1,8 @@
 import comfy.utils
 import numpy as np
 import torch
-
 from pymss import MSSeparator
+
 from ..constants import CATEGORY, MSS_MAX_STEMS, MSS_PARAMS_TYPE, VR_MAX_STEMS, VR_PARAMS_TYPE
 from ..paths import resolve_model_dir
 from ..services.catalog import (
@@ -13,7 +13,7 @@ from ..services.catalog import (
     model_names,
     stem_names,
 )
-from ..utils.audio import audio_source_path, audio_to_numpy, numpy_to_audio
+from ..utils.audio import audio_source_path, audio_to_numpy, numpy_to_audio, resample_audio
 
 
 def device_ids(raw):
@@ -90,15 +90,25 @@ def common_separator_kwargs(stems, params, device, device_ids_raw, use_tta, debu
     }
 
 
+def separator_sample_rate(separator, fallback):
+    config = getattr(separator, "config", None)
+    audio_config = getattr(config, "audio", None) if config is not None else None
+    if audio_config is None or not hasattr(audio_config, "get"):
+        return int(fallback)
+    sample_rate = int(audio_config.get("sample_rate", fallback))
+    return sample_rate if sample_rate > 0 else int(fallback)
+
+
 def run_separation(audio, stems, separator_factory):
-    mix, sample_rate = audio_to_numpy(audio)
+    mix, input_sample_rate = audio_to_numpy(audio)
     source_path = audio_source_path(audio)
 
-    with torch.inference_mode(False):
-        with separator_factory() as separator:
-            results = separator.separate(mix, pbar=True, stems=stems)
+    with torch.inference_mode(False), separator_factory() as separator:
+        model_sample_rate = separator_sample_rate(separator, input_sample_rate)
+        model_mix, model_sample_rate = resample_audio(mix, input_sample_rate, model_sample_rate)
+        results = separator.separate(model_mix, pbar=True, stems=stems)
 
-    return collect_stem_outputs(results, stems, mix, sample_rate, source_path)
+    return collect_stem_outputs(results, stems, model_mix, model_sample_rate, source_path)
 
 
 def separate_model_audio(
