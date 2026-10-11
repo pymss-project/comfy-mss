@@ -95,6 +95,10 @@ All separation nodes resample incoming audio to the sample rate declared by the 
 Returned ComfyUI `AUDIO` values carry that model sample rate. This keeps the frequency and time axes aligned
 with the model's training configuration; downstream save nodes may still explicitly convert the result to another output rate.
 
+For catalog versions that do not include a model's complete stem list, an undownloaded model keeps the node's generic
+output slots instead of deleting possible residual stems. After its YAML config is available, use `Refresh Models` to
+replace those placeholders with the configured stem names. Execution always reads the complete stem list from the loaded model.
+
 ### Custom MSS Separate
 
 `Custom MSS Separate` supports MSST models only; VR/UVR models are not supported by this custom-model workflow. It scans the `custom` folder located under the pymss model root: `<pymss_model_dir>/custom` (for example, `E:/AI/Pymss-Studio/models/custom` when `pymss` is `E:/AI/Pymss-Studio/models`). Each custom model needs its own direct child folder. The node displays that folder's name, and only lists folders containing both a supported model file and a YAML config file, for example:
@@ -179,6 +183,9 @@ Existing workflows keep their saved `model_type`; explicit selections take prece
 - `weight_1` to `weight_10`: dynamic numeric weights, defaulting to `1`.
 
 Only the selected number of audio inputs and matching weights are shown. The ensemble algorithms are delegated to pymss' native ensemble implementation.
+
+Mono inputs are expanded to match multichannel inputs, and a single-item batch is broadcast to the largest input batch.
+Other incompatible channel or batch counts raise an error instead of silently dropping audio data.
 
 ### Save Audio
 

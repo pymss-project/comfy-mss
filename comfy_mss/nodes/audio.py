@@ -1,3 +1,5 @@
+import math
+
 from pymss.ensemble import ENSEMBLE_ALGORITHMS
 
 from ..constants import CATEGORY
@@ -9,9 +11,12 @@ def parse_weight(value, index):
     if not text:
         return 1.0
     try:
-        return float(text)
+        parsed = float(text)
     except ValueError as exc:
         raise ValueError(f"weight_{index} must be a number.") from exc
+    if not math.isfinite(parsed):
+        raise ValueError(f"weight_{index} must be a finite number.")
+    return parsed
 
 
 class PymssAudioInvertPhase:

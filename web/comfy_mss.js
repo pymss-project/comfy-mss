@@ -77,6 +77,10 @@ app.registerExtension({
       };
     }
 
+    if (!COMFY_MSS_NODE_TYPES.has(nodeData.name)) {
+      return;
+    }
+
     const originalOnConnectionsChange = nodeType.prototype.onConnectionsChange;
     nodeType.prototype.onConnectionsChange = function (...args) {
       const result = originalOnConnectionsChange?.apply(this, args);
@@ -87,10 +91,6 @@ app.registerExtension({
       this.graph?.setDirtyCanvas?.(true, true);
       return result;
     };
-
-    if (!COMFY_MSS_NODE_TYPES.has(nodeData.name)) {
-      return;
-    }
 
     const originalOnDrawForeground = nodeType.prototype.onDrawForeground;
     nodeType.prototype.onDrawForeground = function (...args) {

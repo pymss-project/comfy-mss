@@ -74,5 +74,9 @@ export function localizedModelDisplayName(model) {
   if (!model) {
     return "";
   }
+  const language = currentLanguage();
+  if (language === "zh" || language === "zh-TW") {
+    return model.display_name_cn ?? model.display_name ?? model.name ?? "";
+  }
   return model.display_name ?? model.name ?? "";
 }

@@ -2,6 +2,15 @@ import { getWidget } from "./utils.js";
 import { setNodeWidth } from "./sizing.js";
 import { t } from "./i18n.js";
 
+export async function uploadAudioFile(api, file) {
+  const body = new FormData();
+  body.append("image", file);
+  body.append("type", "input");
+  const response = await api.fetchApi("/upload/image", { method: "POST", body });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json();
+}
+
 function addAudioUploadButton(node, api) {
   const widget = getWidget(node, "audio");
   if (!widget || node.comfyMssUploadButtonAdded) return;
@@ -13,11 +22,7 @@ function addAudioUploadButton(node, api) {
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
-      const body = new FormData();
-      body.append("audio", file);
-      const response = await api.fetchApi("/comfy-mss/upload-audio", { method: "POST", body });
-      if (!response.ok) throw new Error(await response.text());
-      const result = await response.json();
+      const result = await uploadAudioFile(api, file);
       if (Array.isArray(widget.options?.values) && !widget.options.values.includes(result.name)) {
         widget.options.values.push(result.name);
         widget.options.values.sort((a, b) => a.localeCompare(b));

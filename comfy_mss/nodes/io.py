@@ -1,9 +1,36 @@
+import hashlib
+import ntpath
 import os
+import posixpath
 
 import folder_paths
 
 from ..constants import CATEGORY
 from ..utils.audio import audio_name_from_path, save_comfy_audio
+
+
+def resolve_input_audio_path(audio):
+    value = str(audio or "").strip()
+    normalized = value.replace("\\", "/")
+    path_value = (
+        normalized.rsplit("[", 1)[0].strip()
+        if normalized.endswith(("[input]", "[output]", "[temp]"))
+        else normalized
+    )
+    if not value or ntpath.isabs(path_value) or posixpath.isabs(path_value) or ".." in path_value.split("/"):
+        raise ValueError("audio path must be relative to the ComfyUI input directory.")
+
+    input_dir = os.path.realpath(folder_paths.get_input_directory())
+    audio_path = os.path.realpath(folder_paths.get_annotated_filepath(value))
+    input_key = os.path.normcase(input_dir)
+    audio_key = os.path.normcase(audio_path)
+    try:
+        inside_input = os.path.commonpath((input_key, audio_key)) == input_key
+    except ValueError:
+        inside_input = False
+    if not inside_input:
+        raise ValueError("audio path must stay inside the ComfyUI input directory.")
+    return audio_path
 
 
 class PymssLoadAudio:
@@ -34,10 +61,29 @@ class PymssLoadAudio:
     def load(self, audio, input_name=""):
         from comfy_extras.nodes_audio import load
 
-        audio_path = folder_paths.get_annotated_filepath(audio)
+        audio_path = resolve_input_audio_path(audio)
         waveform, sample_rate = load(audio_path)
         comfy_audio = {"waveform": waveform.unsqueeze(0), "sample_rate": sample_rate}
         return (comfy_audio, audio_name_from_path(audio_path))
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, audio, input_name=""):
+        try:
+            audio_path = resolve_input_audio_path(audio)
+        except (OSError, TypeError, ValueError):
+            return "Invalid audio file path."
+        if not os.path.isfile(audio_path):
+            return f"Invalid audio file: {audio}"
+        return True
+
+    @classmethod
+    def IS_CHANGED(cls, audio, input_name=""):
+        audio_path = resolve_input_audio_path(audio)
+        digest = hashlib.sha256()
+        with open(audio_path, "rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
 
 
 class PymssSaveAudio:

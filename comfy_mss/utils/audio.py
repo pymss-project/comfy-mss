@@ -9,6 +9,9 @@ import torch
 from pymss.audio_io import load_audio, save_audio
 
 
+SUPPORTED_OUTPUT_FORMATS = {"wav", "flac", "mp3"}
+
+
 def audio_to_numpy(audio):
     if audio is None:
         raise ValueError("audio input is required.")
@@ -26,9 +29,8 @@ def numpy_to_audio(value, sample_rate, stem_name=None, source_path=None):
     if array.ndim == 1:
         array = array[None, :]
     elif array.ndim == 2:
-        # pymss returns most stems as [samples, channels]. ComfyUI wants [channels, samples].
-        if array.shape[0] > array.shape[1] and array.shape[1] <= 8:
-            array = array.T
+        # MSSeparator.separate() returns sample-major [samples, channels].
+        array = array.T
     else:
         raise ValueError(f"Unsupported separated stem shape: {array.shape}")
     audio = {"waveform": torch.from_numpy(np.ascontiguousarray(array)).unsqueeze(0), "sample_rate": int(sample_rate)}
@@ -42,6 +44,14 @@ def audio_batch_to_numpy(audio):
     sample_rate = int(audio["sample_rate"])
     if waveform.ndim != 3:
         raise ValueError(f"Expected ComfyUI AUDIO waveform [batch, channels, samples], got shape {tuple(waveform.shape)}.")
+    if waveform.shape[0] < 1:
+        raise ValueError("audio batch must contain at least one item.")
+    if waveform.shape[1] < 1:
+        raise ValueError("audio must contain at least one channel.")
+    if waveform.shape[2] < 1:
+        raise ValueError("audio must contain at least one sample.")
+    if sample_rate <= 0:
+        raise ValueError("sample rate must be a positive integer.")
     return waveform.detach().cpu().numpy().astype(np.float32, copy=False), sample_rate
 
 
@@ -132,23 +142,27 @@ def make_audio_file_name(filename, audio, batch_index=None):
     return safe_filename_part(file_name, "audio")
 
 
-def unique_output_path(save_dir, file_name, output_format):
-    path = os.path.join(save_dir, f"{file_name}.{output_format}")
-    if not os.path.exists(path):
-        return path
-
-    counter = 1
+def reserve_unique_output_path(save_dir, file_name, output_format):
+    counter = 0
     while True:
-        candidate = os.path.join(save_dir, f"{file_name}_{counter:05d}.{output_format}")
-        if not os.path.exists(candidate):
+        suffix = "" if counter == 0 else f"_{counter:05d}"
+        candidate = os.path.join(save_dir, f"{file_name}{suffix}.{output_format}")
+        try:
+            descriptor = os.open(candidate, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666)
+        except FileExistsError:
+            counter += 1
+            continue
+        else:
+            os.close(descriptor)
             return candidate
-        counter += 1
 
 
 def resample_audio_batch(waveform, source_sample_rate, target_sample_rate):
     target_sample_rate = int(target_sample_rate)
     source_sample_rate = int(source_sample_rate)
-    if target_sample_rate <= 0 or target_sample_rate == source_sample_rate:
+    if source_sample_rate <= 0 or target_sample_rate <= 0:
+        raise ValueError("sample rates must be positive integers.")
+    if target_sample_rate == source_sample_rate:
         return waveform, source_sample_rate
 
     import torchaudio
@@ -167,10 +181,14 @@ def save_comfy_audio(
     mp3_bit_rate,
     filename="",
 ):
+    output_format = str(output_format or "").strip().lower()
+    if output_format not in SUPPORTED_OUTPUT_FORMATS:
+        raise ValueError(f"Unsupported audio output format: {output_format or '<empty>'}")
     waveform, sample_rate = audio_batch_to_numpy(audio)
+    if output_format == "mp3" and waveform.shape[1] > 2:
+        raise ValueError("MP3 export supports mono or stereo audio only.")
     waveform, sample_rate = resample_audio_batch(waveform, sample_rate, target_sample_rate)
     save_dir = resolve_save_dir()
-    output_format = output_format.lower()
     audio_params = {
         "wav_bit_depth": wav_bit_depth,
         "flac_bit_depth": flac_bit_depth,
@@ -184,7 +202,14 @@ def save_comfy_audio(
         audio_array = np.ascontiguousarray(item.T)
         batch_index = None if batch_size == 1 else index
         file_name = make_audio_file_name(filename, audio, batch_index)
-        path = unique_output_path(save_dir, file_name, output_format)
-        save_audio(path, audio_array, sample_rate, output_format, audio_params)
+        path = reserve_unique_output_path(save_dir, file_name, output_format)
+        try:
+            save_audio(path, audio_array, sample_rate, output_format, audio_params)
+        except BaseException:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+            raise
         saved_paths.append(path)
     return saved_paths
